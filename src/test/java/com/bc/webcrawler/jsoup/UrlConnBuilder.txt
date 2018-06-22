@@ -1,0 +1,35 @@
+2018-06-06T20:07:07.090. Memory: 928757040
+Attempted: 1, failed: 0
+Scrapp: false, URL: http://www.buzzwears.com
+Attempted: 2, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/275_real+baby+girls+tank+top.jsp
+Product. ID: 275, price: NGN1,125.00 NGN750.00
+Attempted: 3, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/635_boys+striped+socks.jsp
+Product. ID: 635, price: NGN525.00 NGN350.00
+Attempted: 4, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/793_TOUCHED+BY+NATURE+2+BABY+CAPS.jsp
+Product. ID: 793, price: NGN1,109.00 NGN739.00
+Jun 06, 2018 8:08:20 PM com.bc.webcrawler.CrawlerImpl parseNext
+WARNING: Parse failed for: http://www.buzzwears.com/products/1004_Canyon+girls+sparkle+dress.jsp. Reason: java.net.SocketTimeoutException: Read timed out
+Jun 06, 2018 8:08:20 PM com.bc.webcrawler.Crawler next
+WARNING: 
+Attempted: 5, failed: 1
+Failed: Optional[http://www.buzzwears.com/products/734_Luvable+friends+3pk+socks.jsp]
+Attempted: 6, failed: 1
+Scrapp: true, URL: http://www.buzzwears.com/products/734_Luvable+friends+3pk+socks.jsp
+Product. ID: 734, price: NGN821.00 NGN547.00
+Attempted: 7, failed: 1
+Scrapp: true, URL: http://www.buzzwears.com/products/726_Baby+girls+3pair+socks.jsp
+Product. ID: 726, price: NGN821.00 NGN547.00
+Attempted: 8, failed: 1
+Scrapp: true, URL: http://www.buzzwears.com/products/742_3-Pack+Novelty+Print+No+Show+socks.jsp
+Product. ID: 742, price: NGN821.00 NGN547.00
+Attempted: 9, failed: 1
+Scrapp: true, URL: http://www.buzzwears.com/products/274_real+baby+girls+tank+top.jsp
+Product. ID: 274, price: NGN1,125.00 NGN750.00
+Attempted: 10, failed: 1
+Scrapp: true, URL: http://www.buzzwears.com/products/276_real+baby+girls+tank+top.jsp
+Product. ID: 276, price: NGN1,125.00 NGN750.00
+2018-06-06T20:09:26.627. Consumed. time: 139_558, Memory: 2992
+

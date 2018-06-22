@@ -1,0 +1,32 @@
+2018-06-06T19:58:44.333. Memory: 915_758_616
+Attempted: 1, failed: 0
+Scrapp: false, URL: http://www.buzzwears.com
+Attempted: 2, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/275_real+baby+girls+tank+top.jsp
+Product. ID: 275, price: NGN1,125.00 NGN750.00
+Attempted: 3, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/635_boys+striped+socks.jsp
+Product. ID: 635, price: NGN525.00 NGN350.00
+Attempted: 4, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/793_TOUCHED+BY+NATURE+2+BABY+CAPS.jsp
+Product. ID: 793, price: NGN1,109.00 NGN739.00
+Attempted: 5, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/1004_Canyon+girls+sparkle+dress.jsp
+Product. ID: 1004, price: NGN5,749.00 NGN3,833.00
+Attempted: 6, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/734_Luvable+friends+3pk+socks.jsp
+Product. ID: 734, price: NGN821.00 NGN547.00
+Attempted: 7, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/726_Baby+girls+3pair+socks.jsp
+Product. ID: 726, price: NGN821.00 NGN547.00
+Attempted: 8, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/742_3-Pack+Novelty+Print+No+Show+socks.jsp
+Product. ID: 742, price: NGN821.00 NGN547.00
+Attempted: 9, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/274_real+baby+girls+tank+top.jsp
+Product. ID: 274, price: NGN1,125.00 NGN750.00
+Attempted: 10, failed: 0
+Scrapp: true, URL: http://www.buzzwears.com/products/1002_Route66+boys+2+piece+set.jsp
+Product. ID: 1002, price: NGN4,106.00 NGN2,737.00
+2018-06-06T20:00:37.916. Consumed. time: 113_593, Memory: 343_832
+
