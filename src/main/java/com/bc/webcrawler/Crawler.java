@@ -53,7 +53,11 @@ public interface Crawler<E> extends Iterator<E> {
         try{
             return parseNext();
         }catch(IOException e) {
-            LOG.log(Level.WARNING, "", LOG.isLoggable(Level.FINE) ? e : e.toString());
+            if(LOG.isLoggable(Level.FINE)) {
+                LOG.log(Level.WARNING, "", e); 
+            }else{
+                LOG.warning(e.toString());
+            }
             return null;
         }
     }

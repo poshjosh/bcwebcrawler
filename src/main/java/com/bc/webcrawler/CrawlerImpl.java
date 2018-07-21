@@ -433,7 +433,7 @@ public class CrawlerImpl<E> implements Serializable,
                     (Util.usedMemory(mb4)));
             }
         } catch (InterruptedException e) {
-            logger.log(Level.WARNING, "Interrupted waiting before next batch", e);
+            logger.log(Level.FINE, "Crawler interrupted waiting before next batch. Crawler: \n" + this, e);
         } finally {
             notifyAll();
         }
@@ -478,10 +478,11 @@ public class CrawlerImpl<E> implements Serializable,
 
     public void print(StringBuilder builder) {
         builder.append(getClass().getName());
-        builder.append('@').append(Integer.toHexString(hashCode()));
-        builder.append("{Attempted: ").append(this.attempted.size());
-        builder.append(", Failed: ").append(this.getFailed());
-        builder.append(", Urls Left: ").append(this.getRemaining());
-        builder.append('}');
+        builder.append('@').append(this.hashCode());
+        builder.append("{\nTime spent: ").append(this.getTimeSpentMillis());
+        builder.append(". URLs:: attempted: ").append(this.attempted.size());
+        builder.append(", failed: ").append(this.getFailed());
+        builder.append(", remaining: ").append(this.getRemaining());
+        builder.append('\n').append('}');
     }
 }
