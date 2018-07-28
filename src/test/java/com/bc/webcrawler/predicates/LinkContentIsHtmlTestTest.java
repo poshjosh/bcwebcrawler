@@ -8,13 +8,13 @@ package com.bc.webcrawler.predicates;
 import com.bc.webcrawler.ConnectionProviderImpl;
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.function.Predicate;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import com.bc.webcrawler.ConnectionProvider;
+import java.util.function.BiPredicate;
 
 /**
  *
@@ -49,16 +49,16 @@ public class LinkContentIsHtmlTestTest {
         final ConnectionProvider urlConnProvider = 
                 new ConnectionProviderImpl(() -> Collections.EMPTY_LIST);
         
-        final Predicate<String> instance = new LinkContentIsHtmlTest(
+        final BiPredicate<String, Boolean> instance = new LinkContentIsHtmlTest(
                 urlConnProvider, 10_000, 30_000
         );
         
         String link = "http://www.looseboxes.com";
-        boolean passed = instance.test(link);
+        boolean passed = instance.test(link, Boolean.TRUE);
         System.out.println(LocalDateTime.now() + ". Passed: " + passed + ", link: " + link);
         
         link = "http://www.looseboxes.com/legal/licenses/software.html";
-        passed = instance.test(link);
+        passed = instance.test(link, Boolean.TRUE);
         System.out.println(LocalDateTime.now() + ". Passed: " + passed + ", link: " + link);
     }
 }

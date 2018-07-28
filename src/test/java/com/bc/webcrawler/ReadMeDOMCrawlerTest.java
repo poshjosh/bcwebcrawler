@@ -173,23 +173,31 @@ public class ReadMeDOMCrawlerTest {
 
         final Crawler<List> crawler = crawlerContext.newCrawler(Collections.singleton(startUrl));    
         
-        crawler.stream().forEach((nodeList) -> {
-            System.out.println("\nPrinting Nodes");
-            String title = null;
-            for(Object obj : nodeList) {
-                System.out.println(obj);
-                final Node node = (Node)obj;
-                if(node.text != null) {
-                    title = new String(node.text);
+        try{
+            crawler.stream().forEach((nodeList) -> {
+                System.out.println("\nPrinting Nodes");
+                if(nodeList == null) {
+                    System.out.println("Didnot extract anything");
+                    return;
                 }
-                if(node.startTag == HTML.Tag.TITLE) {
+                String title = null;
+                for(Object obj : nodeList) {
+                    System.out.println(obj);
+                    final Node node = (Node)obj;
                     if(node.text != null) {
                         title = new String(node.text);
                     }
-                    break;
+                    if(node.startTag == HTML.Tag.TITLE) {
+                        if(node.text != null) {
+                            title = new String(node.text);
+                        }
+                        break;
+                    }
                 }
-            }
-            System.out.println("Extracted page containing " + nodeList.size() + " nodes, with title: " + title);
-        });
+                System.out.println("Extracted page containing " + nodeList.size() + " nodes, with title: " + title);
+            });
+        }finally{
+            crawler.shutdown();
+        }
     }
 }

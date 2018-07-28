@@ -15,35 +15,46 @@
  */
 package com.bc.webcrawler.predicates;
 
-import com.bc.net.UrlUtil;
 import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 /**
- * @author Chinomso Bassey Ikwuagwu on Oct 7, 2017 10:37:13 AM
+ * @author Chinomso Bassey Ikwuagwu on Jul 28, 2018 6:12:29 PM
  */
-public class LinkStartsWithTargetLinkTest implements Predicate<String> {
+public class SameHostTest implements Predicate<String> {
 
-    private static final Logger LOG = Logger.getLogger(LinkStartsWithTargetLinkTest.class.getName());
+    private static final Logger LOG = Logger.getLogger(SameHostTest.class.getName());
 
-    private final String targetLink;
+    private final String targetHost;
 
-    public LinkStartsWithTargetLinkTest(String targetLink) throws MalformedURLException {
-        this.targetLink =  format(targetLink);
+    public SameHostTest(String targetLink) throws MalformedURLException {
+        this(new URL(targetLink));
+    }
+
+    public SameHostTest(URL targetUrl) {
+        this.targetHost = this.getHost(targetUrl);
     }
 
     @Override
     public boolean test(String link) {
         try{
-            return link.startsWith(targetLink) || format(link).startsWith(targetLink);
+            final URL url = new URL(link);
+            return Objects.equals(this.targetHost, this.getHost(url));
         }catch(MalformedURLException e) {
             LOG.fine(e.toString());
             return false;
         }
     }
     
-    private String format(String link) throws MalformedURLException {
-        return UrlUtil.toWWWFormat(link).replaceFirst("https", "http");
+    private String getHost(URL url) {
+        final String host = url.getHost();
+        if(host != null && !host.isEmpty()) {
+            return host;
+        }else{
+            return url.getAuthority();
+        }
     }
 }

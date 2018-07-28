@@ -32,7 +32,11 @@ import java.util.stream.StreamSupport;
  */
 public interface Crawler<E> extends Iterator<E> {
     
-    Logger LOG = Logger.getLogger(Crawler.class.getName());
+    Logger CRAWLER_LOGGER = Logger.getLogger(Crawler.class.getName());
+    
+    boolean isShutdown();
+    
+    void shutdown();    
     
     String getBaseUrl();
     
@@ -53,10 +57,10 @@ public interface Crawler<E> extends Iterator<E> {
         try{
             return parseNext();
         }catch(IOException e) {
-            if(LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.WARNING, "", e); 
+            if(CRAWLER_LOGGER.isLoggable(Level.FINE)) {
+                CRAWLER_LOGGER.log(Level.WARNING, "", e); 
             }else{
-                LOG.warning(e.toString());
+                CRAWLER_LOGGER.warning(e.toString());
             }
             return null;
         }

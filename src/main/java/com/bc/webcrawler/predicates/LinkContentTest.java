@@ -23,11 +23,12 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 import com.bc.webcrawler.ConnectionProvider;
+import java.util.function.BiPredicate;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 6, 2017 3:29:25 PM
  */
-public class LinkContentTest implements Serializable, Predicate<String> {
+public class LinkContentTest implements Serializable, BiPredicate<String, Boolean> {
 
     private transient static final Logger logger = Logger.getLogger(LinkContentTest.class.getName());
     
@@ -61,7 +62,7 @@ public class LinkContentTest implements Serializable, Predicate<String> {
     }
     
     @Override
-    public boolean test(String link) {
+    public boolean test(String link, Boolean outputIfNone) {
         final long mb4 = com.bc.util.Util.availableMemory();
         boolean output;
         if(this.linkSuffixTest.test(link)) {
@@ -69,13 +70,13 @@ public class LinkContentTest implements Serializable, Predicate<String> {
         }else{
             final URLConnection conn = connectionProvider.of(link, false, null);
             if(conn == null) {
-                output = false;
+                output = outputIfNone;
             }else{
                 conn.setConnectTimeout(connectTimeout);
                 conn.setReadTimeout(readTimeout);
                 final String contentType = conn.getContentType();
                 if (contentType == null) {
-                    output = false;
+                    output = outputIfNone;
                 } else {
                     output = contentType.toLowerCase().contains(this.requiredContentTypePart);
                 }

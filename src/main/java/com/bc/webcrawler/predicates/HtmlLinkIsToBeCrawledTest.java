@@ -20,6 +20,7 @@ import com.bc.webcrawler.UrlParser;
 import java.util.Objects;
 import java.util.function.Predicate;
 import com.bc.webcrawler.ConnectionProvider;
+import java.util.function.BiPredicate;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 7, 2017 5:36:04 PM
@@ -28,7 +29,7 @@ public class HtmlLinkIsToBeCrawledTest implements Predicate<String> {
 
     private final Predicate<String> linkIsToBeCrawledTest;
         
-    private final Predicate<String> linkContentIsHtmlTest;
+    private final BiPredicate<String, Boolean> linkContentIsHtmlTest;
         
     public HtmlLinkIsToBeCrawledTest(
             ConnectionProvider urlConnProvider,
@@ -46,6 +47,6 @@ public class HtmlLinkIsToBeCrawledTest implements Predicate<String> {
     @Override
     public boolean test(String link) {
         
-        return linkIsToBeCrawledTest.test(link) && linkContentIsHtmlTest.test(link);
+        return linkIsToBeCrawledTest.test(link) && linkContentIsHtmlTest.test(link, Boolean.TRUE);
     }
 }

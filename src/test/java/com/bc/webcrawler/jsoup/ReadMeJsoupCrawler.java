@@ -191,38 +191,44 @@ public class ReadMeJsoupCrawler {
         final long mb4 = Util.availableMemory();
         System.out.println(LocalDateTime.now() + ". Memory: " + mb4);
         
-        while(crawler.hasNext()) {
+        try{
             
-            final Document doc = crawler.next();
-            
-            final CrawlMetaData metaData = crawler.getMetaData();
-            
-//            System.out.println(LocalDateTime.now());
-            
-            System.out.println(MessageFormat.format(
-                    "Attempted: {0}, failed: {1}", 
-                    metaData.getAttempted(), metaData.getFailed()));
+            while(crawler.hasNext()) {
 
-            if(doc == null) {
-                System.err.println("Failed: " + crawler.getCurrentUrl());
-                continue;
-            }
-            
-            final String url = doc.location();
-            
-//            System.out.println("URL: " + url +  "\nTitle: " + doc.title());
-            
-            final boolean isToScrapp = linkToScrappTest.test(url);
-            
-            System.out.println("Scrapp: " + isToScrapp + ", URL: " + url);
+                final Document doc = crawler.next();
 
-            if(isToScrapp) {
-                final Element idElem = doc.getElementsByAttributeValue("itemprop", "productID").first();
-                final Element priceElem = doc.getElementsByAttributeValue("itemprop", "price").first();
-                System.out.println("Product. ID: " + (idElem==null?null:idElem.text()) + 
-                        ", price: " + (priceElem==null?null:priceElem.text()));
+                final CrawlMetaData metaData = crawler.getMetaData();
+
+    //            System.out.println(LocalDateTime.now());
+
+                System.out.println(MessageFormat.format(
+                        "Attempted: {0}, failed: {1}", 
+                        metaData.getAttempted(), metaData.getFailed()));
+
+                if(doc == null) {
+                    System.err.println("Failed: " + crawler.getCurrentUrl());
+                    continue;
+                }
+
+                final String url = doc.location();
+
+    //            System.out.println("URL: " + url +  "\nTitle: " + doc.title());
+
+                final boolean isToScrapp = linkToScrappTest.test(url);
+
+                System.out.println("Scrapp: " + isToScrapp + ", URL: " + url);
+
+                if(isToScrapp) {
+                    final Element idElem = doc.getElementsByAttributeValue("itemprop", "productID").first();
+                    final Element priceElem = doc.getElementsByAttributeValue("itemprop", "price").first();
+                    System.out.println("Product. ID: " + (idElem==null?null:idElem.text()) + 
+                            ", price: " + (priceElem==null?null:priceElem.text()));
+                }
             }
+        }finally{
+            crawler.shutdown();
         }
+        
         
         System.out.println(LocalDateTime.now() + 
                 ". Consumed. time: " + (System.currentTimeMillis() - tb4) +
