@@ -22,22 +22,26 @@ implementation and plug-in.
         //
         final Crawler<Document> crawler = context.newCrawler(Collections.singleton(startUrl));
 
-        // Get a stream of Documents
-        //
-        final Stream<Document> stream = crawler.stream();
+        try{
+            // Get a stream of Documents
+            //
+            final Stream<Document> stream = crawler.stream();
 
-        // OR
-        //
-        while(crawler.hasNext()) {
-            
-            final Document doc = crawler.next();
-            
-            final CrawlMetaData metaData = crawler.getMetaData();
-            
-            System.out.println(MessageFormat.format(
-                    "Attempted: {0}, failed: {1}", 
-                    metaData.getAttempted(), metaData.getFailed()));
-        }            
+            // OR
+            //
+            while(crawler.hasNext()) {
+
+                final Document doc = crawler.next();
+
+                final CrawlMetaData metaData = crawler.getMetaData();
+
+                System.out.println(MessageFormat.format(
+                        "Attempted: {0}, failed: {1}", 
+                        metaData.getAttempted(), metaData.getFailed()));
+            }   
+        }finally{
+            crawler.shutdown();
+        }
 
 ### Use case with Jsoup
 
@@ -184,38 +188,43 @@ public class ReadMeJsoupCrawler {
         final long tb4 = System.currentTimeMillis();
         final long mb4 = Util.availableMemory();
         System.out.println(LocalDateTime.now() + ". Memory: " + mb4);
-        
-        while(crawler.hasNext()) {
-            
-            final Document doc = crawler.next();
-            
-            final CrawlMetaData metaData = crawler.getMetaData();
-            
-//            System.out.println(LocalDateTime.now());
-            
-            System.out.println(MessageFormat.format(
-                    "Attempted: {0}, failed: {1}", 
-                    metaData.getAttempted(), metaData.getFailed()));
 
-            if(doc == null) {
-                System.err.println("Failed: " + crawler.getCurrentUrl());
-                continue;
-            }
-            
-            final String url = doc.location();
-            
-//            System.out.println("URL: " + url +  "\nTitle: " + doc.title());
-            
-            final boolean isToScrapp = linkToScrappTest.test(url);
-            
-            System.out.println("Scrapp: " + isToScrapp + ", URL: " + url);
+        try{
 
-            if(isToScrapp) {
-                final Element idElem = doc.getElementsByAttributeValue("itemprop", "productID").first();
-                final Element priceElem = doc.getElementsByAttributeValue("itemprop", "price").first();
-                System.out.println("Product. ID: " + (idElem==null?null:idElem.text()) + 
-                        ", price: " + (priceElem==null?null:priceElem.text()));
+            while(crawler.hasNext()) {
+
+                final Document doc = crawler.next();
+
+                final CrawlMetaData metaData = crawler.getMetaData();
+
+    //            System.out.println(LocalDateTime.now());
+
+                System.out.println(MessageFormat.format(
+                        "Attempted: {0}, failed: {1}", 
+                        metaData.getAttempted(), metaData.getFailed()));
+
+                if(doc == null) {
+                    System.err.println("Failed: " + crawler.getCurrentUrl());
+                    continue;
+                }
+
+                final String url = doc.location();
+
+    //            System.out.println("URL: " + url +  "\nTitle: " + doc.title());
+
+                final boolean isToScrapp = linkToScrappTest.test(url);
+
+                System.out.println("Scrapp: " + isToScrapp + ", URL: " + url);
+
+                if(isToScrapp) {
+                    final Element idElem = doc.getElementsByAttributeValue("itemprop", "productID").first();
+                    final Element priceElem = doc.getElementsByAttributeValue("itemprop", "price").first();
+                    System.out.println("Product. ID: " + (idElem==null?null:idElem.text()) + 
+                            ", price: " + (priceElem==null?null:priceElem.text()));
+                }
             }
+        }finally{
+            crawler.shutdown();
         }
         
         System.out.println(LocalDateTime.now() + 

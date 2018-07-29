@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.logging.LogManager;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.MutableAttributeSet;
 import javax.swing.text.SimpleAttributeSet;
@@ -28,7 +29,7 @@ import org.junit.Test;
  * @author Chinomso Bassey Ikwuagwu on Mar 23, 2018 8:25:09 AM
  */
 public class ReadMeDOMCrawlerTest {
-    
+
     public final static class Node {
         public final int pos;
         public final HTML.Tag startTag;
@@ -136,10 +137,19 @@ public class ReadMeDOMCrawlerTest {
         }
     }
 
+    public ReadMeDOMCrawlerTest() {
+        final ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        try(InputStream ins = loader.getResourceAsStream("META-INF/logging.properties")) {
+            LogManager.getLogManager().readConfiguration(ins);
+        }catch(IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
     @Test
     public void test() {
         
-        new ReadMeDOMCrawlerTest().crawl("http://www.looseboxes.com");
+        new ReadMeDOMCrawlerTest().crawl("http://www.buzzwears.com");
     }
     
     public void crawl(String startUrl) {
@@ -166,7 +176,7 @@ public class ReadMeDOMCrawlerTest {
                 .preferredLinkTest((url) -> false)
                 .resumeHandler(new ResumeHandlerInMemoryCache(Collections.EMPTY_SET))
                 .retryOnExceptionTestSupplier(() -> new RetryConnectionFilter(2, 2_000L))
-                .timeoutMillis(7_000)
+                .timeoutMillis(20_000)
                 .urlFormatter((url) -> url)
                 .urlParser(urlParser)
                 .build();
@@ -174,6 +184,7 @@ public class ReadMeDOMCrawlerTest {
         final Crawler<List> crawler = crawlerContext.newCrawler(Collections.singleton(startUrl));    
         
         try{
+            
             crawler.stream().forEach((nodeList) -> {
                 System.out.println("\nPrinting Nodes");
                 if(nodeList == null) {

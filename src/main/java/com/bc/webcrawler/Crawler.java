@@ -58,7 +58,7 @@ public interface Crawler<E> extends Iterator<E> {
             return parseNext();
         }catch(IOException e) {
             if(CRAWLER_LOGGER.isLoggable(Level.FINE)) {
-                CRAWLER_LOGGER.log(Level.WARNING, "", e); 
+                CRAWLER_LOGGER.log(Level.WARNING, null, e); 
             }else{
                 CRAWLER_LOGGER.warning(e.toString());
             }
