@@ -1,0 +1,122 @@
+cd C:\Users\Josh\Documents\NetBeansProjects\bcwebcrawler; "JAVA_HOME=C:\\Program Files\\Java\\jdk1.8.0_144" cmd /c "\"\"C:\\Program Files\\NetBeans 8.1\\java\\maven\\bin\\mvn.bat\" -Dtest=com.bc.webcrawler.ReadMeDOMCrawlerTest -Dmaven.ext.class.path=\"C:\\Program Files\\NetBeans 8.1\\java\\maven-nblib\\netbeans-eventspy.jar;C:\\Program Files\\NetBeans 8.1\\java\\maven-nblib\\netbeans-cos.jar\" -Dfile.encoding=UTF-8 surefire:test\""
+Running NetBeans Compile On Save execution. Phase execution is skipped and output directories of dependency projects (with Compile on Save turned on) will be used instead of their jar artifacts.
+Scanning for projects...
+                                                                        
+------------------------------------------------------------------------
+Building bcwebcrawler 1.0-SNAPSHOT
+------------------------------------------------------------------------
+
+--- maven-surefire-plugin:2.19.1:test (default-cli) @ bcwebcrawler ---
+
+-------------------------------------------------------
+ T E S T S
+-------------------------------------------------------
+Running com.bc.webcrawler.ReadMeDOMCrawlerTest
+Aug 05, 2018 3:06:35 AM com.bc.webcrawler.CrawlerImpl <init>
+FINE: Seeding Crawler with 1 URLs
+Aug 05, 2018 3:06:35 AM com.bc.webcrawler.CrawlerImpl <init>
+FINE: 
+ Base URL: http://www.buzzwears.com
+Start URL: http://www.buzzwears.com
+Aug 05, 2018 3:06:35 AM com.bc.webcrawler.CrawlerImpl <init>
+FINE: Size: 922, of queue for com.bc.webcrawler.CrawlerImpl-LinkCollectionThreadPool ExecutorService
+Aug 05, 2018 3:06:35 AM com.bc.webcrawler.CrawlerImpl <init>
+FINE: Done creating: com.bc.webcrawler.CrawlerImpl@2ac1fdc4{
+Time: 0/120000. URLs:: attempted: 0, failed: 0, remaining: 1
+com.bc.webcrawler.CrawlerContextBuilderImpl@5f150435{crawlQueryUrls=true, parseLimit=10, crawlLimit=100, batchSize=5, batchInterval=5000, timeoutMillis=120000, connectTimeoutForLinkValidation=5000, readTimeoutForLinkValidation=10000}
+}
+Aug 05, 2018 3:06:35 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 0, parsing: http://www.buzzwears.com
+
+Printing Nodes
+Extracted page containing 887 nodes, with title: BuzzWears - You can't get this quality of fashion cheaper elsewhere
+Aug 05, 2018 3:06:46 AM com.bc.webcrawler.CrawlerImpl waitForFirstLink
+FINE: Will wait at most 108367 millis for link at position zero
+Aug 05, 2018 3:06:46 AM com.bc.webcrawler.CrawlerImpl waitForFirstLink
+FINE: Waited 29 millis for link at position zero: http://www.buzzwears.com/products/searchresults.jsp
+Aug 05, 2018 3:06:46 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 2, parsing: http://www.buzzwears.com/products/searchresults.jsp
+
+Printing Nodes
+Extracted page containing 244 nodes, with title: BuzzWears - You can't get this quality of fashion cheaper elsewhere
+Aug 05, 2018 3:06:47 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 1, parsing: http://www.buzzwears.com/user/login.jsp
+
+Printing Nodes
+Extracted page containing 199 nodes, with title: Sign in to BuzzWearsYou can't get this quality of fashion cheaper elsewhere
+Aug 05, 2018 3:06:48 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 21, parsing: http://www.buzzwears.com/user/join.jsp
+
+Printing Nodes
+Extracted page containing 204 nodes, with title: Join BuzzWearsYou can't get this quality of fashion cheaper elsewhere
+Aug 05, 2018 3:06:54 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 22, parsing: http://www.buzzwears.com/search?page=1
+
+Printing Nodes
+Extracted page containing 244 nodes, with title: BuzzWears - You can't get this quality of fashion cheaper elsewhere
+Aug 05, 2018 3:06:58 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 22, parsing: http://www.buzzwears.com/products/635_boys+striped+socks.jsp
+
+Printing Nodes
+Extracted page containing 369 nodes, with title: Kid's Accessories @BuzzWears
+Aug 05, 2018 3:06:59 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 22, parsing: http://www.buzzwears.com/products/730_Luvable+friends+3pc+socks.jsp
+
+Printing Nodes
+Extracted page containing 357 nodes, with title: Baby's Accessories @BuzzWears
+Aug 05, 2018 3:07:00 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 25, parsing: http://www.buzzwears.com/products/741_Nurtria+Silicone+Tip+Spoons+2-Pack.jsp
+
+Printing Nodes
+Extracted page containing 357 nodes, with title: Baby's Accessories @BuzzWears
+Aug 05, 2018 3:07:01 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 25, parsing: http://www.buzzwears.com/products/726_Baby+girls+3pair+socks.jsp
+
+Printing Nodes
+Extracted page containing 357 nodes, with title: Baby's Accessories @BuzzWears
+Aug 05, 2018 3:07:04 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 52 links from: http://www.buzzwears.com
+Aug 05, 2018 3:07:04 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 2 links from: http://www.buzzwears.com/products/searchresults.jsp
+Aug 05, 2018 3:07:04 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 2 links from: http://www.buzzwears.com/user/login.jsp
+Aug 05, 2018 3:07:04 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 1 links from: http://www.buzzwears.com/user/join.jsp
+Aug 05, 2018 3:07:04 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 1 links from: http://www.buzzwears.com/search?page=1
+Aug 05, 2018 3:07:05 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 1 links from: http://www.buzzwears.com/products/635_boys+striped+socks.jsp
+Aug 05, 2018 3:07:06 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 1 links from: http://www.buzzwears.com/products/730_Luvable+friends+3pc+socks.jsp
+Aug 05, 2018 3:07:07 AM com.bc.webcrawler.CrawlerImpl parse
+FINE: Pages left: 51, parsing: http://www.buzzwears.com/products/723_luvable+friends+baby+girl+socks.jsp
+Aug 05, 2018 3:07:07 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 2 links from: http://www.buzzwears.com/products/741_Nurtria+Silicone+Tip+Spoons+2-Pack.jsp
+
+Printing Nodes
+Extracted page containing 357 nodes, with title: Baby's Accessories @BuzzWears
+Aug 05, 2018 3:07:08 AM com.bc.webcrawler.CrawlerImpl hasNext
+FINE: HasNext: false
+Aug 05, 2018 3:07:08 AM com.bc.webcrawler.CrawlerImpl shutdown
+FINE: SHUTTING DOWN com.bc.webcrawler.CrawlerImpl@2ac1fdc4{
+Time: 33390/120000. URLs:: attempted: 10, failed: 0, remaining: 53
+com.bc.webcrawler.CrawlerContextBuilderImpl@5f150435{crawlQueryUrls=true, parseLimit=10, crawlLimit=100, batchSize=5, batchInterval=5000, timeoutMillis=120000, connectTimeoutForLinkValidation=5000, readTimeoutForLinkValidation=10000}
+}
+Aug 05, 2018 3:07:08 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 1 links from: http://www.buzzwears.com/products/726_Baby+girls+3pair+socks.jsp
+Aug 05, 2018 3:07:09 AM com.bc.webcrawler.CrawlerImpl collectLinks
+FINE: Collected: 1 links from: http://www.buzzwears.com/products/723_luvable+friends+baby+girl+socks.jsp
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 34.955 sec - in com.bc.webcrawler.ReadMeDOMCrawlerTest
+
+Results :
+
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+
+------------------------------------------------------------------------
+BUILD SUCCESS
+------------------------------------------------------------------------
+Total time: 37.377s
+Finished at: Sun Aug 05 03:07:10 WAT 2018
+Final Memory: 7M/113M
+------------------------------------------------------------------------
+

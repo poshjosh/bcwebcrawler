@@ -193,7 +193,9 @@ public class ReadMeDOMCrawlerTest {
                 }
                 String title = null;
                 for(Object obj : nodeList) {
-                    System.out.println(obj);
+                    
+//                    System.out.println(obj);
+                    
                     final Node node = (Node)obj;
                     if(node.text != null) {
                         title = new String(node.text);
