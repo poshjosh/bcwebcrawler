@@ -287,7 +287,7 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
 
     @Override
     public String toString() {
-        return getClass().getName() + '@' + Integer.toHexString(hashCode()) + 
+        return CrawlerContext.class.getName() + '@' + Integer.toHexString(hashCode()) + 
                 "{crawlQueryUrls=" + crawlQueryUrls + 
                 ", parseLimit=" + parseLimit + ", crawlLimit=" + crawlLimit + 
                 ", batchSize=" + batchSize + ", batchInterval=" + batchInterval + 

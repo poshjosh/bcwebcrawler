@@ -36,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -226,7 +227,7 @@ public class ReadMeJsoupCrawler {
                 }
             }
         }finally{
-            crawler.shutdown();
+            crawler.shutdown(3, TimeUnit.SECONDS);
         }
         
         

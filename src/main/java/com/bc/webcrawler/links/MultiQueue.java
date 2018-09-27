@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package com.bc.webcrawler;
+package com.bc.webcrawler.links;
 
 import java.util.AbstractQueue;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Aug 4, 2018 9:44:52 PM
  */
 public class MultiQueue<E> extends AbstractQueue<E> {
+
+    private transient static final Logger LOG = Logger.getLogger(MultiQueue.class.getName());
 
     private final Queue<E> [] pages;
     
@@ -89,12 +90,6 @@ public class MultiQueue<E> extends AbstractQueue<E> {
         return false;
     }
     
-    public E take() throws InterruptedException {
-        final BlockingQueue<E> queue = (BlockingQueue)this.getFirstNonEmptyQueue(pages[0]);
-        final E output = queue.take();
-        return output;
-    }
-
     @Override
     public boolean offer(E e) {
         final boolean output;
@@ -102,16 +97,6 @@ public class MultiQueue<E> extends AbstractQueue<E> {
             output = false;
         }else {
             output = pages[pages.length - 1].offer(e);
-        }
-        return output;
-    }
-
-    public boolean offer(E e, long timeout, TimeUnit timeUnit) throws InterruptedException {
-        final boolean output;
-        if(this.pages.length == 0) {
-            output = false;
-        }else {
-            output = ((BlockingQueue)pages[pages.length - 1]).offer(e, timeout, timeUnit);
         }
         return output;
     }
@@ -132,12 +117,6 @@ public class MultiQueue<E> extends AbstractQueue<E> {
         return output;
     }
 
-    public E poll(long timeout, TimeUnit timeUnit) throws InterruptedException {
-        final BlockingQueue<E> queue = (BlockingQueue)this.getFirstNonEmptyQueue(pages[0]);
-        final E output = queue.poll(timeout, timeUnit);
-        return output;
-    }
-    
     @Override
     public E peek() {
         final E output;

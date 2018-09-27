@@ -28,6 +28,8 @@ import java.util.function.BiPredicate;
 public class HtmlLinkIsToBeCrawledTest implements Predicate<String> {
 
     private final Predicate<String> linkIsToBeCrawledTest;
+    
+    private final Predicate<String> linkHasExtensionTest;
         
     private final BiPredicate<String, Boolean> linkContentIsHtmlTest;
         
@@ -38,15 +40,17 @@ public class HtmlLinkIsToBeCrawledTest implements Predicate<String> {
 
         Objects.requireNonNull(urlParser);
         
+        this.linkIsToBeCrawledTest = new LinkIsToBeCrawledTest(crawlQueryLinks);
+        
+        this.linkHasExtensionTest = new LinkHasExtensionTest();
+        
         this.linkContentIsHtmlTest = new LinkContentIsHtmlTest(
                 urlConnProvider, connectTimeoutForLinkValidation, readTimeoutForLinkValidation);
-        
-        this.linkIsToBeCrawledTest = new LinkIsToBeCrawledTest(crawlQueryLinks);
     }
 
     @Override
     public boolean test(String link) {
-        
-        return linkIsToBeCrawledTest.test(link) && linkContentIsHtmlTest.test(link, Boolean.TRUE);
+        return linkIsToBeCrawledTest.test(link) && 
+                (linkHasExtensionTest.test(link) || linkContentIsHtmlTest.test(link, Boolean.TRUE));
     }
 }

@@ -60,5 +60,13 @@ public class LinkContentIsHtmlTestTest {
         link = "http://www.looseboxes.com/legal/licenses/software.html";
         passed = instance.test(link, Boolean.TRUE);
         System.out.println(LocalDateTime.now() + ". Passed: " + passed + ", link: " + link);
+
+        link = "http://www.looseboxes.com/idisc/images/appicon.png";
+        passed = instance.test(link, Boolean.TRUE);
+        System.out.println(LocalDateTime.now() + ". Passed: " + passed + ", link: " + link);
+        
+        link = "http://www.looseboxes.com/legal/licenses/software.jpg";
+        passed = instance.test(link, Boolean.TRUE);
+        System.out.println(LocalDateTime.now() + ". Passed: " + passed + ", link: " + link);
     }
 }

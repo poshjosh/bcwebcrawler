@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -36,9 +37,7 @@ public interface Crawler<E> extends Iterator<E> {
     
     boolean isShutdown();
     
-    void shutdown();    
-    
-    String getBaseUrl();
+    void shutdown(long timeout, TimeUnit timeUnit);    
     
     List<String> getSeedUrls();
     

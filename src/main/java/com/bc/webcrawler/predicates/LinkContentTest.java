@@ -30,7 +30,7 @@ import java.util.function.BiPredicate;
  */
 public class LinkContentTest implements Serializable, BiPredicate<String, Boolean> {
 
-    private transient static final Logger logger = Logger.getLogger(LinkContentTest.class.getName());
+    private transient static final Logger LOG = Logger.getLogger(LinkContentTest.class.getName());
     
     private final ConnectionProvider connectionProvider;
     
@@ -68,35 +68,61 @@ public class LinkContentTest implements Serializable, BiPredicate<String, Boolea
         if(this.linkSuffixTest.test(link)) {
             output = true;
         }else{
-            final URLConnection conn = connectionProvider.of(link, false, null);
-            if(conn == null) {
-                output = outputIfNone;
-            }else{
-                conn.setConnectTimeout(connectTimeout);
-                conn.setReadTimeout(readTimeout);
-                final String contentType = conn.getContentType();
-                if (contentType == null) {
-                    output = outputIfNone;
-                } else {
-                    output = contentType.toLowerCase().contains(this.requiredContentTypePart);
-                }
-            }
+            output = this.hasRequiredContentType(link, outputIfNone);
+            LOG.finer(() -> "Success: " + output + ", consumed memory: " + 
+                    (com.bc.util.Util.usedMemory(mb4)) + ", checking content of: " + link);
         }
-        logger.finer(() -> "Consumed memory: " + (com.bc.util.Util.usedMemory(mb4)) + 
-        ", checking content of: " + link);
         return output;
     }
-
+    
+    public boolean hasRequiredContentType(String link, Boolean outputIfNone) {
+        boolean output;
+        final URLConnection conn = connectionProvider.of(link, false, null);
+        if(conn == null) {
+            output = outputIfNone;
+        }else{
+            conn.setConnectTimeout(connectTimeout);
+            conn.setReadTimeout(readTimeout);
+            final String contentType = conn.getContentType();
+            if (contentType == null) {
+                output = outputIfNone;
+            } else {
+                output = contentType.toLowerCase().contains(this.requiredContentTypePart);
+            }
+        }
+        return output;
+    }
+    
     private boolean endsWith(String link, String extension) {
         boolean accept = false;
         if (link.endsWith(extension)) {
             accept = true;
         } else {
-            int n = link.lastIndexOf('/');
-            if (link.indexOf(extension + "?", n) != -1) {
+            final int offset = link.lastIndexOf('/');
+            if (link.indexOf(extension + "?", offset) != -1) {
                 accept = true;
             }
         }
         return accept;
+    }
+
+    public final ConnectionProvider getConnectionProvider() {
+        return connectionProvider;
+    }
+
+    public final String getRequiredContentTypePart() {
+        return requiredContentTypePart;
+    }
+
+    public final Predicate<String> getLinkSuffixTest() {
+        return linkSuffixTest;
+    }
+
+    public final int getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    public final int getReadTimeout() {
+        return readTimeout;
     }
 }

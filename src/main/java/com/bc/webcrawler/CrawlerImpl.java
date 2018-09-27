@@ -15,6 +15,12 @@
  */
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.links.LinkQueueImpl;
+import com.bc.webcrawler.links.LinkCollectorImpl;
+import com.bc.webcrawler.links.LinkCollector;
+import com.bc.webcrawler.links.LinkCollectorAsync;
+import com.bc.webcrawler.links.LinkedBlockingQueueWithTimedPeek;
+import com.bc.webcrawler.links.LinkQueue;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
@@ -23,8 +29,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import com.bc.util.Util;
-import com.bc.util.concurrent.BoundedExecutorService;
-import com.bc.webcrawler.predicates.LinkStartsWithTargetLinkTest;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.text.MessageFormat;
@@ -32,9 +36,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
@@ -42,10 +45,6 @@ public class CrawlerImpl<E> implements Serializable,
         Iterator<E>, Crawler<E>, CrawlMetaData {
     
     private transient static final Logger LOG = Logger.getLogger(CrawlerImpl.class.getName());
-    
-    private final String startUrl;
-    
-    private final String baseUrl;
     
     private final List<String> seedUrls;
 
@@ -55,27 +54,29 @@ public class CrawlerImpl<E> implements Serializable,
 
     private final Set<String> failed;
 
-    private final MultiQueue<String> links;
+    private final LinkQueue<String> linkQueue;
 
     private final Set<String> robotsExcludedLinks;
     
-    private final Predicate<String> linkStartsWithBaseUrlTest;
-
-    private final ExecutorService linkCollectionExecSvc;
+    private final LinkCollector<E> linkCollector;
     
-    private boolean shutdown;
-
-    private int crawled;
-
+    private final boolean asyncLinkCollection;
+    
     private int indexWithinBatch;
     
     private long startTime = -1L;
-            
+
     public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrls) {
+        this(context, seedUrls, true);
+    }
+    
+    public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrls, boolean asyncLinkCollection) {
 
         LOG.finer("Creating");
         
         this.context = Objects.requireNonNull(context);
+        
+        this.asyncLinkCollection = asyncLinkCollection;
 
         LOG.fine(() -> "Seeding Crawler with " + seedUrls.size() + " URLs");
         
@@ -86,60 +87,43 @@ public class CrawlerImpl<E> implements Serializable,
         this.seedUrls = new ArrayList(seedUrls);
         
         final int queueCapacity = (int)this.context.getCrawlLimit();
-        this.links = new MultiQueue(
+        this.linkQueue = new LinkQueueImpl(
+                context.getPreferredLinkTest(),
                 new LinkedBlockingQueueWithTimedPeek(seedUrls), 
-                new LinkedBlockingQueueWithTimedPeek(queueCapacity));
+                new LinkedBlockingQueueWithTimedPeek(queueCapacity <= 0 ? 1 : queueCapacity));
         
-        this.startUrl = Objects.requireNonNull(this.links.peek());
+        final String startUrl = Objects.requireNonNull(this.linkQueue.peek(null));
+        final String baseUrl = com.bc.util.Util.getBaseURL(startUrl);
         
-        Objects.requireNonNull(this.startUrl);
-        
-        this.baseUrl = com.bc.util.Util.getBaseURL(startUrl);
-        
-        LOG.fine(() -> "\n Base URL: " + this.baseUrl + "\nStart URL: " + this.startUrl);
-
-        try{
-            this.linkStartsWithBaseUrlTest = new LinkStartsWithTargetLinkTest(this.baseUrl);
-        }catch(MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
+        LOG.fine(() -> "\n Base URL: " + baseUrl + "\nStart URL: " + startUrl);
         
         this.attempted = new HashSet();
 
+        final Predicate<String> isLinkAttempted = (link) -> attempted.contains(link);
+        final Consumer<String> accumulator = (link) -> linkQueue.add(link);
+        this.linkCollector = asyncLinkCollection ? 
+                new LinkCollectorAsync(this.context, isLinkAttempted, accumulator, baseUrl) :
+                new LinkCollectorImpl(this.context, isLinkAttempted, accumulator, baseUrl);
+        
         this.failed = new HashSet();
 
         this.robotsExcludedLinks = new HashSet<>();
-
-        final String threadPoolName = this.getClass().getName() + "-LinkCollectionThreadPool";
-
-        final int size = (int)(Util.availableMemory() / 1_000_000);
-        LOG.fine(() -> "Size: " + size + ", of queue for " + threadPoolName + " ExecutorService");
-        this.linkCollectionExecSvc = new BoundedExecutorService(
-                threadPoolName, 1, size < 2 ? 2 : size, false);
-        
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown()));
         
         LOG.fine(() -> "Done creating: " + this);
     }
 
     @Override
     public boolean isShutdown() {
-        return shutdown;
+        return this.linkCollector.isShutdown();
     }
     
     @Override
-    public void shutdown() {
+    public void shutdown(long timeout, TimeUnit timeUnit) {
         if(this.isShutdown()) {
             return;
         }
         LOG.log(Level.FINE, "SHUTTING DOWN {0}", this);
-        Util.shutdownAndAwaitTermination(linkCollectionExecSvc, 3, TimeUnit.SECONDS);
-        this.shutdown = true;
-    }
-
-    @Override
-    public String getBaseUrl() {
-        return baseUrl;
+        this.linkCollector.shutdown(timeout, timeUnit);
     }
 
     @Override
@@ -149,7 +133,7 @@ public class CrawlerImpl<E> implements Serializable,
     
     @Override
     public Optional<String> getCurrentUrl() {
-        return links.isEmpty() ? Optional.empty() : Optional.ofNullable(links.peek());
+        return linkQueue.isEmpty() ? Optional.empty() : Optional.ofNullable(linkQueue.peek(null));
     }
 
     @Override
@@ -190,7 +174,7 @@ public class CrawlerImpl<E> implements Serializable,
             
                 LOG.fine(() -> "Rejected by: " + parseUrlTest.getClass().getName() + ", URL: " + next);
 
-                links.remove();
+                linkQueue.poll(null);
             }
         }
 
@@ -229,7 +213,7 @@ public class CrawlerImpl<E> implements Serializable,
             return null;
         }
 
-        String url;
+        String url = null;
 
         E doc;
 
@@ -243,19 +227,20 @@ public class CrawlerImpl<E> implements Serializable,
                 LOG.log(Level.FINER, "Raw: {0}\nURL: {1}", new Object[]{rawUrl, url});
             }
 
-            this.context.getResumeHandler().saveIfNotExists(rawUrl);
+            this.context.getResumeHandler().saveIfNotExists(url);
 
-            this.attempted.add(rawUrl);
+            this.attempted.add(url);
 
             try{
                 doc = parse(url, this.context.getRetryOnExceptionTestSupplier().get());
             }catch(IOException e) {
-                if(url.contains("&amp;")) {
-                    url = url.replace("&amp;", "&");
-                    doc = parse(url, this.context.getRetryOnExceptionTestSupplier().get());
-                }else{
-                    throw e;
-                }
+//                if(url.contains("&amp;")) {
+//                    url = url.replace("&amp;", "&");
+//                    doc = parse(url, this.context.getRetryOnExceptionTestSupplier().get());
+//                }else{
+//                    throw e;
+//                }
+                throw e;
             }
             
             if(doc != null) {
@@ -266,7 +251,7 @@ public class CrawlerImpl<E> implements Serializable,
                     }
                 }else{
                     
-                    this.collectLinks(doc, url);
+                    this.linkCollector.collectLinks(url, doc);
                 }
             }
 
@@ -274,10 +259,12 @@ public class CrawlerImpl<E> implements Serializable,
 
         }catch (IOException | RuntimeException e){
 
-            boolean added = this.failed.add(rawUrl);
+            final String addToFailed = url == null ? rawUrl : url;
+            
+            final boolean added = this.failed.add(addToFailed);
 
             if(added) { 
-                LOG.warning(() -> "Parse failed for: " + rawUrl + ". Reason: " + e.toString());
+                LOG.warning(() -> "Parse failed for: " + addToFailed + ". Reason: " + e.toString());
             }
 
             throw e;
@@ -292,7 +279,7 @@ public class CrawlerImpl<E> implements Serializable,
     
     @Override
     public void remove() {
-      throw new UnsupportedOperationException("Not supported!");
+        throw new UnsupportedOperationException("Not supported!");
     }
 
     @Override
@@ -306,9 +293,9 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public boolean isWithinCrawlLimit() {
-        final boolean withinLimit = isWithLimit(this.crawled, this.context.getCrawlLimit());
+        final boolean withinLimit = isWithLimit(this.getCrawled(), this.context.getCrawlLimit());
         LOG.finest(() -> MessageFormat.format("URLs: {0}, limit: {1}, within crawl limit: {2}", 
-                this.links.size(), this.context.getCrawlLimit(), withinLimit));
+                this.linkQueue.size(), this.context.getCrawlLimit(), withinLimit));
         return withinLimit;
     }
 
@@ -365,118 +352,50 @@ public class CrawlerImpl<E> implements Serializable,
         return doc;
     }
 
-    public void collectLinks(E doc, String url) {
-        
-        LOG.finer(() -> MessageFormat.format("Pages left: {0}, crawling: {1}", 
-            this.getRemaining(), url));
-    
-        final Set<String> docLinks = this.context.getLinksExtractor().apply(doc);
-        
-        LOG.finer(() -> "Extracted: "+docLinks.size()+" links from: " + url);
-        
-        if(docLinks.isEmpty()) {
-            LOG.fine(() -> "No links to collect from: " + url);
-        }else{
-            this.linkCollectionExecSvc.submit(() -> this.collectLinks(docLinks, url));
-        }
-    }
-    
-    public int collectLinks(Set<String> linkSet, String url) {
-        int collected = 0;
-        for(String link : linkSet) {
-            if(this.collectLink(link)) {
-                ++collected;
-            }
-        }
-        final int n = collected;
-        LOG.finer(() -> "Collected: " + n + " links from: " + url);
-        return collected;
-    }
-
-    public boolean collectLink(String link) {
-
-        boolean collected = false;
-        
-        final boolean collect = this.isToBeCollected(link);
-        
-        LOG.finer(() -> "Will be collected: " + collect + ", URL: " + link);
-        
-        if(collect){
-
-            final Queue<String> target;
-            if(links.isEmpty()) {
-                target = this.links.getPageAt(0);
-            }else if(this.context.getPreferredLinkTest().test(link)) {    
-                target = this.links.getPageAt(0);
-            }else{
-                target = this.links.getPageAt(1);
-            }
-
-            LOG.finest(() -> "Collecting " + link);
-            
-            collected = target.add(link);
-
-            ++crawled;
-        }
-        
-        return collected;
-    }
-    
-    public boolean isToBeCollected(String link) {
-        if(LOG.isLoggable(Level.FINER)) {
-            return this.isToBeCollectedWithMetricsLog(link, Level.FINER);
-        }else{
-            final boolean collect = 
-                    (this.isWithinCrawlLimit()) && 
-                    (this.linkStartsWithBaseUrlTest.test(link)) &&
-                    !(this.isAttempted(link)) && 
-                    !(links.contains(link)) &&
-                    (this.context.getCrawlUrlTest().test(link));
-            return collect;
-        }
-    }
-    
-    private boolean isToBeCollectedWithMetricsLog(String link, Level level) {
-        
-        final boolean withinCrawlLimit;
-        Boolean startsWithBaseUrl = null;
-        Boolean alreadyAttempted = null;
-        Boolean alreadyCollected = null;
-        Boolean filterAccepted = null;
-        
-        final boolean collect = 
-                (withinCrawlLimit = this.isWithinCrawlLimit()) && 
-                (startsWithBaseUrl = this.linkStartsWithBaseUrlTest.test(link)) &&
-                !(alreadyAttempted = this.isAttempted(link)) && 
-                !(alreadyCollected = links.contains(link)) &&
-                (filterAccepted = this.context.getCrawlUrlTest().test(link));
-        
-            LOG.log(level, "Collect: " + collect + ", within crawl limit: " + withinCrawlLimit + 
-                ", starts with BaseURL: " + startsWithBaseUrl + ", collected: " + alreadyCollected + 
-                ", attempted: " + alreadyAttempted + ", collected: " + alreadyCollected + 
-                ", filter rejected: " + (filterAccepted == null ? null : !filterAccepted) + "\n" + link);
-            
-        return collect;    
-    }
-
     public boolean mayProceed() {
         final boolean mayProceed = !this.isTimedout() && this.isWithinFailLimit();
         LOG.finer(() -> "May proceed: " + mayProceed);
         return mayProceed;
     }
+    
+    public String waitAndGetFirstLink(String outputIfNone) {
+        return this.waitForFirstLink(false, outputIfNone);
+    }
+    
+    public String waitAndRemoveFirstLink(String outputIfNone) {
+        return this.waitForFirstLink(true, outputIfNone);
+    }
 
-    public boolean isAttempted(String link) {
-        final boolean alreadyAttempted = this.attempted.contains(link);
-        LOG.log(alreadyAttempted?Level.FINER:Level.FINEST, "Already attempted: {0}", link);  
-        final ResumeHandler resumeHandler = context.getResumeHandler();
-        return alreadyAttempted || resumeHandler.isExisting(link); 
+    public String waitForFirstLink(boolean remove, String outputIfNone) {
+        final long timeoutMillis = this.asyncLinkCollection ? this.getTimeLeftMillis(0) : 1;
+        final TimeUnit timeUnit = TimeUnit.MILLISECONDS;
+        final long tb4 = System.currentTimeMillis();
+        final String link;
+        if(timeoutMillis <= 0L) {
+            link = linkQueue.isEmpty() ? outputIfNone : remove ? linkQueue.poll(outputIfNone) : linkQueue.peek(outputIfNone);
+        }else if(!linkQueue.isEmpty()) {
+            link = remove ? linkQueue.poll(outputIfNone) : linkQueue.peek(outputIfNone);
+        }else{
+
+            LOG.finer(() -> "Queue size: " + linkQueue.size() + 
+                    ", will wait at most " + timeoutMillis + " millis for next link.");
+
+            link = remove ? 
+                    linkQueue.poll(timeoutMillis, timeUnit, outputIfNone) : 
+                    linkQueue.peek(timeoutMillis, timeUnit, outputIfNone);
+
+            LOG.finer(() -> "Queue size: " + linkQueue.size() + ", waited " + 
+                    (System.currentTimeMillis() - tb4) + " millis for link: " + link);
+        }
+        
+        return link == null ? outputIfNone : link;
     }
     
     public boolean isTimedout() {
         return this.getTimeSpentMillis() > this.context.getTimeoutMillis();
     }
     
-    public long getTimeLeftMillis(int outputIfNone) {
+    public long getTimeLeftMillis(long outputIfNone) {
         final long timeLeftMillis = context.getTimeoutMillis() - this.getTimeSpentMillis();
         return timeLeftMillis < 0 ? outputIfNone : timeLeftMillis;
     }
@@ -505,47 +424,6 @@ public class CrawlerImpl<E> implements Serializable,
         }
     }
 
-    public String waitAndGetFirstLink(String outputIfNone) {
-        return this.waitForFirstLink(false, outputIfNone);
-    }
-    
-    public String waitAndRemoveFirstLink(String outputIfNone) {
-        return this.waitForFirstLink(true, outputIfNone);
-    }
-    
-    public String waitForFirstLink(boolean remove, String outputIfNone) {
-        try{
-            final long tb4 = System.currentTimeMillis();
-            final long timeLeftMillis = this.getTimeLeftMillis(0);
-            final String link;
-            if(timeLeftMillis <= 0L) {
-                link = links.isEmpty() ? outputIfNone : remove ? links.poll() : links.peek();
-            }else if(!links.isEmpty()) {
-                link = remove ? links.poll() : links.peek();
-            }else{
-                
-                LOG.finer(() -> "Will wait at most " + timeLeftMillis + " millis for link at position zero");
-                
-                link = remove ? 
-                        links.poll(timeLeftMillis, TimeUnit.MILLISECONDS) :
-                        this.peek(timeLeftMillis, TimeUnit.MILLISECONDS);
-                
-                LOG.finer(() -> "Waited " + (System.currentTimeMillis() - tb4) + 
-                        " millis for link at position zero: " + link);
-            }
-            return link == null ? outputIfNone : link;
-        }catch(InterruptedException e) {
-            LOG.log(Level.WARNING, null, e);
-            return outputIfNone;
-        }
-    }
-
-    public String peek(long timeout, TimeUnit timeUnit) throws InterruptedException {
-        final LinkedBlockingQueueWithTimedPeek<String> queue = 
-                (LinkedBlockingQueueWithTimedPeek)links.getFirstNonEmptyQueue(links.getPageAt(0));
-        return queue.peek(timeout, timeUnit);
-    }
-
     @Override
     public int getFailed() {
         return this.failed.size();
@@ -553,12 +431,12 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public int getRemaining() {
-        return this.links.size();
+        return this.linkQueue.size();
     }
 
     @Override
     public int getCrawled() {
-        return crawled;
+        return this.linkCollector.getCollected();
     }
 
     @Override
@@ -573,7 +451,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public List<String> getRemainingLinks() {
-        return Arrays.asList(links.toArray(new String[0]));
+        return Arrays.asList(this.linkQueue.toArray(new String[0]));
     }
 
     @Override
