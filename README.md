@@ -78,16 +78,9 @@ public class ReadMeJsoupCrawler {
 
         private final int maxBodySize;
 
-        private final Function<String, String> userAgentProvider;
-
         private final Map<String, String> cookies;
 
         public JsoupUrlParser(int timeout, int maxBodySize) {
-            this(new UserAgentProvider(), timeout, maxBodySize);
-        }
-
-        public JsoupUrlParser(Function<String, String> userAgentProvider, int timeout, int maxBodySize) {
-            this.userAgentProvider = Objects.requireNonNull(userAgentProvider);
             this.timeout = timeout;
             this.maxBodySize = maxBodySize;
             this.cookies = new HashMap<>();
@@ -97,30 +90,30 @@ public class ReadMeJsoupCrawler {
         @Override
         public Document parse(String link) throws MalformedURLException, IOException {
 
-            final URL url = new URL(null, link, new com.bc.net.util.HttpStreamHandlerForBadStatusLine());
-
-            final String userAgent = Objects.requireNonNull(this.userAgentProvider.apply(link));
-
-            logger.finer(() -> "UserAgent: " + userAgent + ", URL: " + link + "\nCookies: " + cookies);
+            final URL url = new URL(link);
 
             final Connection.Response res = HttpConnection
                     .connect(url)
-                    .userAgent(userAgent)
                     .followRedirects(true)
                     .cookies(cookies)
                     .timeout(timeout)
                     .maxBodySize(maxBodySize)
                     .execute();
 
+            collectCookies(res);
+
+            final Document doc = res.parse();
+
+            return doc;
+        }
+
+        private void collectCookies(Connection.Response res) {
+
             final Map<String, String> cookiesFromRes = res.cookies();
 
             logger.finer(() -> "Cookies from response: " + cookiesFromRes);
 
             this.cookies.putAll(cookiesFromRes);
-
-            final Document doc = res.parse();
-
-            return doc;
         }
 
         @Override
@@ -131,11 +124,6 @@ public class ReadMeJsoupCrawler {
     
     public static void main(String... args) throws IOException {
         
-//        try(final InputStream in = Thread.currentThread().getContextClassLoader()
-//                .getResourceAsStream("META-INF/configs/logging.properties")) {
-//            LogManager.getLogManager().readConfiguration(in);
-//        }
-        
         final int connectTimeout = 10_000;
         final int readTimeout = 20_000;
         final int maxBodySize = 100_000_000;
@@ -143,8 +131,6 @@ public class ReadMeJsoupCrawler {
         final UrlParser<Document> parser;
         
         parser = new JsoupUrlParser(connectTimeout + readTimeout, maxBodySize);
-//        parser = new UrlParserImpl(connectTimeout, readTimeout);
-//        parser = new OkHttpUrlParser(connectTimeout, readTimeout);
         
         final String baseUrl = "http://www.buzzwears.com";
         final String startUrl = baseUrl;
@@ -190,10 +176,6 @@ public class ReadMeJsoupCrawler {
                 
         final Crawler<Document> crawler = context.newCrawler(Collections.singleton(startUrl));
 
-        final long tb4 = System.currentTimeMillis();
-        final long mb4 = Util.availableMemory();
-        System.out.println(LocalDateTime.now() + ". Memory: " + mb4);
-
         try{
 
             while(crawler.hasNext()) {
@@ -201,8 +183,6 @@ public class ReadMeJsoupCrawler {
                 final Document doc = crawler.next();
 
                 final CrawlMetaData metaData = crawler.getMetaData();
-
-    //            System.out.println(LocalDateTime.now());
 
                 System.out.println(MessageFormat.format(
                         "Attempted: {0}, failed: {1}", 
@@ -215,7 +195,7 @@ public class ReadMeJsoupCrawler {
 
                 final String url = doc.location();
 
-    //            System.out.println("URL: " + url +  "\nTitle: " + doc.title());
+                System.out.println("URL: " + url +  "\nTitle: " + doc.title());
 
                 final boolean isToScrapp = linkToScrappTest.test(url);
 
@@ -231,10 +211,6 @@ public class ReadMeJsoupCrawler {
         }finally{
             crawler.shutdown();
         }
-        
-        System.out.println(LocalDateTime.now() + 
-                ". Consumed. time: " + (System.currentTimeMillis() - tb4) +
-                ", Memory: " + Util.usedMemory(mb4));
     }
 }
 
