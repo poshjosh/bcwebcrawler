@@ -8,6 +8,7 @@ implementation and plug-in.
 
 ### Format
 
+```java
         // Configure CrawlerContext
         //
         Function<Document, Set<String>> linkExtractor;
@@ -46,6 +47,7 @@ implementation and plug-in.
         }finally{
             crawler.shutdown();
         }
+```
 
 ### Use case with Jsoup
 
