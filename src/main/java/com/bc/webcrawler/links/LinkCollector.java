@@ -18,6 +18,7 @@ package com.bc.webcrawler.links;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Aug 11, 2018 12:55:13 AM
@@ -25,11 +26,9 @@ import java.util.concurrent.TimeUnit;
  */
 public interface LinkCollector<E> {
 
-    boolean collectLink(String linkToCollect);
+    void collectLinks(E doc, Consumer<String> consumer);
 
-    void collectLinks(String url, E doc);
-
-    int collectLinks(String url, Set<String> linksToCollect);
+    void collectLinks(Set<String> linksToCollect, Consumer<String> consumer);
 
     int getCollected();
 

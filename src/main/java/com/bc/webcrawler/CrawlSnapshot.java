@@ -16,33 +16,33 @@
 
 package com.bc.webcrawler;
 
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
- * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 11:10:12 AM
+ * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 6:13:37 PM
  */
-public class ResumeHandlerInMemoryCache implements ResumeHandler {
+public interface CrawlSnapshot {
 
-    private final Set<String> cache;
-
-    public ResumeHandlerInMemoryCache() {
-        this(Collections.EMPTY_SET);
-    }
+    String getCurrentUrl(String resultIfNone);
     
-    public ResumeHandlerInMemoryCache(Set<String> pendingUrls) {
-        this.cache = new HashSet();
-        this.cache.addAll(pendingUrls);
-    }
+    int getAttempted();
 
-    @Override
-    public boolean isExisting(String name) {
-        return cache.contains(name);
-    }
+    int getCrawled();
+    
+    int getFailed();
+    
+    Set<String> getFailedLinks();
 
-    @Override
-    public boolean saveIfNotExists(String name) {
-        return cache.add(name);
-    }
+    int getRemaining();
+
+    List<String> getRemainingLinks();
+    
+    long getTimeSpentMillis();
+
+    boolean isWithinCrawlLimit();
+
+    boolean isWithinParseLimit();
+    
+    boolean isWithinFailLimit();
 }

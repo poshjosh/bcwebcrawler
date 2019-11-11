@@ -16,9 +16,10 @@
 
 package com.bc.webcrawler.links;
 
-import com.bc.webcrawler.CrawlerContext;
+import com.bc.util.UrlUtil;
+import com.bc.webcrawler.Buffer;
 import com.bc.webcrawler.ResumeHandler;
-import com.bc.webcrawler.predicates.LinkStartsWithTargetLinkTest;
+import com.bc.webcrawler.predicates.SameHostTest;
 import java.net.MalformedURLException;
 import java.text.MessageFormat;
 import java.util.Objects;
@@ -36,80 +37,114 @@ public class LinkCollectorImpl<E> implements LinkCollector<E> {
 
     private transient static final Logger LOG = Logger.getLogger(LinkCollectorImpl.class.getName());
 
-    private final CrawlerContext<E> context;
+    private final LinkCollectionContext<E> context;
     
     private final Predicate<String> isLinkAttempted;
     
-    private final Consumer<String> accumulator;
-
     private final Predicate<String> linkStartsWithBaseUrlTest;
+    
+    private boolean shutdownAttempted;
     
     private boolean shutdown;
 
     private int crawled;
 
-    public LinkCollectorImpl(
-            CrawlerContext<E> context, 
-            Predicate<String> isLinkAttempted, 
-            Consumer<String> accumulator, 
-            String baseUrl) {
-
+    public LinkCollectorImpl(LinkCollectionContext<E> context, String baseUrl) {
+        
         this.context = Objects.requireNonNull(context);
         
-        this.isLinkAttempted = Objects.requireNonNull(isLinkAttempted);
+        final Buffer<String> buffer = Objects.requireNonNull(context.getAttemptedLinkBuffer());
         
-        this.accumulator = Objects.requireNonNull(accumulator);
+        this.isLinkAttempted = (link) -> buffer.contains(link);
         
         try{
-            this.linkStartsWithBaseUrlTest = new LinkStartsWithTargetLinkTest(baseUrl);
+            this.linkStartsWithBaseUrlTest = new SameHostTest(baseUrl);
         }catch(MalformedURLException e) {
             throw new RuntimeException(e);
         }
     }
-
+    
+    public boolean isShutdownAttempted() {
+        return shutdownAttempted;
+    }
+    
     @Override
     public boolean isShutdown() {
         return shutdown;
     }
     
     @Override
-    public void shutdown(long timeout, TimeUnit timeUnit) {
+    public final void shutdown(long timeout, TimeUnit timeUnit) {
+
+        if(this.isShutdownAttempted()) {
+            return;
+        }
+        
+        this.shutdownAttempted = true;
+        LOG.fine(() -> "Shutting down");
+        this.doShutdown(timeout, timeUnit);
         this.shutdown = true;
     }
 
+    protected void doShutdown(long timeout, TimeUnit timeUnit) { }
+
     @Override
-    public void collectLinks(String url, E doc) {
+    public void collectLinks(E doc, Consumer<String> consumer) {
+
+        if(this.isShutdownAttempted()) {
+
+            return;
+        }
         
-        LOG.finer(() -> MessageFormat.format("Collected: {0}, collecting: {1}", this.getCollected(), url));
+        LOG.finer(() -> MessageFormat.format("Collected: {0}, collecting: {1}", this.getCollected(), doc));
     
         final Set<String> docLinks = this.context.getLinksExtractor().apply(doc);
         
-        LOG.finer(() -> "Extracted: "+docLinks.size()+" links from: " + url);
+        LOG.finer(() -> "Extracted: "+docLinks.size()+" links from: " + doc);
         
         if(docLinks.isEmpty()) {
-            LOG.fine(() -> "No links to collected from: " + url);
+            LOG.fine(() -> "No links to collected from: " + doc);
         }else{
-            this.collectLinks(url, docLinks);
+            this.collectLinks(docLinks, consumer);
+            LOG.finer(() -> "Collected links from: " + doc);
         }
     }
     
     @Override
-    public int collectLinks(String url, Set<String> linksToCollect) {
-        int collected = 0;
-        for(String link : linksToCollect) {
-            if(this.collectLink(link)) {
-                ++collected;
-            }
+    public void collectLinks(Set<String> linksToCollect, Consumer<String> consumer) {
+
+        if(this.isShutdownAttempted()) {
+
+            LOG.finer("Shutdown. Exiting");
+
+            return;
         }
-        final int n = collected;
-        LOG.finer(() -> "Collected: " + n + " links from: " + url);
-        return collected;
+        
+        for(String link : linksToCollect) {
+            
+            if(this.isShutdownAttempted()) {
+
+                LOG.finer("Shutdown. Exiting");
+            
+                break;
+            }
+            
+            this.collectLink(link, consumer);
+        }
     }
 
-    @Override
-    public boolean collectLink(String linkToCollect) {
-
+    public boolean collectLink(final String s, Consumer<String> consumer) {
+        
         boolean collected = false;
+        
+        if(this.isShutdownAttempted()) {
+            
+            LOG.finer("Shutdown. Exiting");
+            
+            return collected;
+        }
+        
+        final String linkToCollect = this.formatLink(s);
         
         final boolean collect = this.isToBeCollected(linkToCollect);
         
@@ -119,7 +154,7 @@ public class LinkCollectorImpl<E> implements LinkCollector<E> {
 
             LOG.finest(() -> "Collecting " + linkToCollect);
             
-            this.accumulator.accept(linkToCollect);
+            consumer.accept(linkToCollect);
             
             collected = true;
 
@@ -127,6 +162,10 @@ public class LinkCollectorImpl<E> implements LinkCollector<E> {
         }
         
         return collected;
+    }
+    
+    public String formatLink(String link) {
+        return UrlUtil.removeHashPart(link);
     }
     
     @Override

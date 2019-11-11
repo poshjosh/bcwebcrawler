@@ -16,11 +16,8 @@
 
 package com.bc.webcrawler.predicates;
 
-import com.bc.webcrawler.UrlParser;
-import java.util.Objects;
 import java.util.function.Predicate;
-import com.bc.webcrawler.ConnectionProvider;
-import java.util.function.BiPredicate;
+import com.bc.webcrawler.ContentTypeRequest;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 7, 2017 5:36:04 PM
@@ -29,28 +26,22 @@ public class HtmlLinkIsToBeCrawledTest implements Predicate<String> {
 
     private final Predicate<String> linkIsToBeCrawledTest;
     
-    private final Predicate<String> linkHasExtensionTest;
-        
-    private final BiPredicate<String, Boolean> linkContentIsHtmlTest;
-        
+    private final Predicate<String> linkContentIsHtmlTest;
+    
     public HtmlLinkIsToBeCrawledTest(
-            ConnectionProvider urlConnProvider,
-            UrlParser urlParser, int connectTimeoutForLinkValidation, 
-            int readTimeoutForLinkValidation, boolean crawlQueryLinks) {
+            ContentTypeRequest contentTypeProvider,
+            int connectTimeoutForLinkValidation, 
+            int readTimeoutForLinkValidation, 
+            boolean crawlQueryLinks) {
 
-        Objects.requireNonNull(urlParser);
-        
         this.linkIsToBeCrawledTest = new LinkIsToBeCrawledTest(crawlQueryLinks);
         
-        this.linkHasExtensionTest = new LinkHasExtensionTest();
-        
         this.linkContentIsHtmlTest = new LinkContentIsHtmlTest(
-                urlConnProvider, connectTimeoutForLinkValidation, readTimeoutForLinkValidation);
+                contentTypeProvider, connectTimeoutForLinkValidation, readTimeoutForLinkValidation, true);
     }
 
     @Override
     public boolean test(String link) {
-        return linkIsToBeCrawledTest.test(link) && 
-                (linkHasExtensionTest.test(link) || linkContentIsHtmlTest.test(link, Boolean.TRUE));
+        return linkIsToBeCrawledTest.test(link) && linkContentIsHtmlTest.test(link);
     }
 }

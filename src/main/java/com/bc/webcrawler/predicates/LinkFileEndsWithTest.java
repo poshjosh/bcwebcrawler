@@ -17,31 +17,24 @@
 package com.bc.webcrawler.predicates;
 
 import java.io.Serializable;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 /**
- * @author Chinomso Bassey Ikwuagwu on Sep 27, 2018 4:09:49 PM
+ * @author Chinomso Bassey Ikwuagwu on Oct 1, 2018 6:17:09 PM
  */
-public class LinkHasExtensionTest implements Predicate<String>, Serializable {
+public class LinkFileEndsWithTest implements BiPredicate<String, String>, Serializable {
 
     @Override
-    public boolean test(String link) {
-        
-        final int dot;
-        
-        final int slash = link.lastIndexOf('/');
-//        System.out.println("lastIndexOf('/') = " + slash);
-        
-        if(slash == -1) {
-            
-            dot = -1;
-            
-        }else{    
-        
-            dot = link.lastIndexOf('.');
-//            System.out.println("lastIndexOf('.') = " + dot);
+    public boolean test(String link, String extension) {
+        boolean accept = false;
+        if (link.endsWith(extension)) {
+            accept = true;
+        } else {
+            final int offset = link.lastIndexOf('/');
+            if (link.indexOf(extension + "?", offset) != -1) {
+                accept = true;
+            }
         }
-        
-        return dot != -1;
+        return accept;
     }
 }

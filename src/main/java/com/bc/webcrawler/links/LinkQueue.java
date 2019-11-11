@@ -29,8 +29,6 @@ public interface LinkQueue<E> {
     boolean isEmpty();
     
     E peek(E outputIfNone);
-    
-    E peek(long timeout, TimeUnit timeUnit, E outputIfNone);
 
     E poll(E outputIfNone);
     

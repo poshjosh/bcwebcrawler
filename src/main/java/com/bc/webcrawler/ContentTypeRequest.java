@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 NUROX Ltd.
+ * Copyright 2017 NUROX Ltd.
  *
  * Licensed under the NUROX Ltd Software License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,13 @@
 
 package com.bc.webcrawler;
 
-import com.bc.util.Util;
+import java.util.function.BiFunction;
 
 /**
- * @author Chinomso Bassey Ikwuagwu on Jul 28, 2018 6:28:39 PM
+ * @author Chinomso Bassey Ikwuagwu on Oct 6, 2017 12:22:09 PM
  */
-public class SampleValues {
-    
-    public static final String getRandomLink() {
-        return LINKS[Util.randomInt(LINKS.length)];
-    }
+public interface ContentTypeRequest extends BiFunction<String, String, String> {
 
-    public static final String [] LINKS = {
-        "http://www.looseboxes.com/idisc/feed.jsp?feedid=23098",
-        "https://www.google.com/",
-        "http://www.looseboxes.com/idisc/feed.jsp#comment",
-        "https://www.bellanaija.com",
-        "https://mail.google.com"
-    };
+    @Override
+    String apply(String url, String resultIfNone);
 }

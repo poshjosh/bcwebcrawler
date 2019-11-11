@@ -18,12 +18,11 @@ package com.bc.webcrawler.links;
 
 import com.bc.util.Util;
 import com.bc.util.concurrent.BoundedExecutorService;
-import com.bc.webcrawler.CrawlerContext;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -35,52 +34,48 @@ public class LinkCollectorAsync<E> extends LinkCollectorImpl<E> {
 
     private final ExecutorService linkCollectionExecSvc;
     
-    private boolean shutdown;
+    public LinkCollectorAsync(LinkCollectionContext<E> context, String baseUrl) {
     
-    private final Thread shutdownHook;
-
+        this(context, baseUrl, 1, 1024 * 16);
+    }
+    
     public LinkCollectorAsync(
-            CrawlerContext<E> context, 
-            Predicate<String> isLinkAttempted, 
-            Consumer<String> accumulator, 
-            String baseUrl) {
+            LinkCollectionContext<E> context, 
+            String baseUrl,
+            int poolSize, 
+            int queueCapacity) {
         
-        super(context, isLinkAttempted, accumulator, baseUrl);
+        super(context, baseUrl);
 
-        final String threadPoolName = this.getClass().getName() + "-LinkCollectionThreadPool";
-        this.linkCollectionExecSvc = new BoundedExecutorService(threadPoolName, 1, 1, false);
+        final String threadPoolName = this.getClass().getName() + "-ThreadFactory";
 
-        this.shutdownHook = new Thread(() -> doShutdown(999, TimeUnit.MILLISECONDS));
-        
-        Runtime.getRuntime().addShutdownHook(shutdownHook);
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return shutdown;
+        this.linkCollectionExecSvc = new BoundedExecutorService(threadPoolName, poolSize, queueCapacity, false);
     }
     
     @Override
-    public void shutdown(long timeout, TimeUnit timeUnit) {
-        try{
-            this.doShutdown(timeout, timeUnit);
-        }finally{
-            Runtime.getRuntime().removeShutdownHook(shutdownHook);
-        }
+    public void doShutdown(long timeout, TimeUnit timeUnit) {
+        Util.shutdownAndAwaitTermination(linkCollectionExecSvc, timeout, timeUnit);
     }
 
-    private void doShutdown(long timeout, TimeUnit timeUnit) {
-        if(this.isShutdown()) {
+    @Override
+    public void collectLinks(Set<String> linkSet, Consumer<String> consumer) {
+        
+        if(this.isShutdownAttempted()) {
+            
+            LOG.finer("Shutdown. Exiting");
+            
             return;
         }
-        LOG.finer(() -> "Shutting down");
-        Util.shutdownAndAwaitTermination(linkCollectionExecSvc, timeout, timeUnit);
-        this.shutdown = true;
-    }
+        
+        this.linkCollectionExecSvc.submit(() -> {
+            try{
 
-    @Override
-    public int collectLinks(String url, Set<String> linkSet) {
-        this.linkCollectionExecSvc.submit(() -> super.collectLinks(url, linkSet));
-        return -1;
+                super.collectLinks(linkSet, consumer);
+                
+            }catch(RuntimeException e) {
+                LOG.warning(e.toString());
+                LOG.log(Level.FINE, "Exception collecting links", e);
+            }
+        });
     }
 }

@@ -1,34 +1,38 @@
 ## Web Crawler Api
 
-* Elegantly expressive abstraction of simple web crawling logic.
+* Elegantly expressive abstraction of simple web crawling and data extraction logic.
 * Abstracts easily over any html parser libraries like Jsoup, htmlparser etc
-* Super light weight (16 classes)
+* Light weight (30 classes)
 * API itself has no dependencies. To use it however you choose your own html parser
 implementation and plug-in.
 
+### Format
 
         // Configure CrawlerContext
         //
+        Function<Document, Set<String>> linkExtractor;
+
+        com.bc.webcrawler.UrlParser<Document> urlParser;
+
         final CrawlerContext<Document> context = CrawlerContext.builder(Document.class)
-                .batchInterval(3_000)
-                .crawlLimit(100 * n)
+                .crawlLimit(1000)
                 .crawlUrlTest((link) -> true)
-                .
-                .   
-                . 
+                .parseLimit(100)
+                .parseUrlTest((link) -> true)
+                .linksExtractor(linkExtractor)
+                .urlParser(urlParser)
                 .build();
           
+        String startUrl;
+        
         // Create the Crawler 
         //
         final Crawler<Document> crawler = context.newCrawler(Collections.singleton(startUrl));
 
+        // Use the crawler
+        //
         try{
-            // Get a stream of Documents
-            //
-            final Stream<Document> stream = crawler.stream();
 
-            // OR
-            //
             while(crawler.hasNext()) {
 
                 final Document doc = crawler.next();
@@ -176,7 +180,6 @@ public class ReadMeJsoupCrawler {
                 .parseUrlTest((link) -> true)
                 .preferredLinkTest(linkToScrappTest)
                 .resumeHandler(resumeHandler)
-//                .retryOnExceptionTestSupplier(() -> new RetryConnectionFilter(2, 2_000)) 
                 .retryOnExceptionTestSupplier(() -> (exception) -> false) 
                 .timeoutMillis(3600_000 * n)
                 .urlFormatter((link) -> link)

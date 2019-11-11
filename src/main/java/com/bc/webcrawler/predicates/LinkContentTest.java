@@ -17,97 +17,98 @@
 package com.bc.webcrawler.predicates;
 
 import java.io.Serializable;
-import java.net.URLConnection;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
-import com.bc.webcrawler.ConnectionProvider;
 import java.util.function.BiPredicate;
+import java.util.logging.Level;
+import com.bc.webcrawler.ContentTypeRequest;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 6, 2017 3:29:25 PM
  */
-public class LinkContentTest implements Serializable, BiPredicate<String, Boolean> {
+public class LinkContentTest implements Serializable, Predicate<String> {
 
     private transient static final Logger LOG = Logger.getLogger(LinkContentTest.class.getName());
     
-    private final ConnectionProvider connectionProvider;
+    private final ContentTypeRequest contentTypeProvider;
     
     private final String requiredContentTypePart;
     
-    private final Predicate<String> linkSuffixTest;
+    private final Predicate<String> validLinkSuffixTest;
+    
+    private final Predicate<String> invalidLinkSuffixTest;
     
     private final int connectTimeout;
 
     private final int readTimeout;
     
+    private final BiPredicate<String, String> linkFileEndsWithTest;
+    
+    private final boolean resultIfNone;
+    
     public LinkContentTest(
-            ConnectionProvider connectionProvider,
-            Set<String> requiredLinkSuffixes, String requiredContentTypePart,
-            int connectTimeout, int readTimeout) {
-        this.connectionProvider = Objects.requireNonNull(connectionProvider);
-        Objects.requireNonNull(requiredLinkSuffixes);
-        if(requiredLinkSuffixes.isEmpty()) {
-            linkSuffixTest = (link) -> false;
-        }else{
-            linkSuffixTest = (link) -> {
-                final Predicate<String> suffixTest = (suffix) -> endsWith(link.toLowerCase(), suffix);
-                return requiredLinkSuffixes.stream().filter(suffixTest).findFirst().isPresent();
-            };
-        }
+            ContentTypeRequest contentTypeRequest,
+            Set<String> requiredLinkSuffixes, 
+            Set<String> unwantedLinkSuffixes,
+            String requiredContentTypePart,
+            int connectTimeout, int readTimeout,
+            boolean resultIfNone) {
+        this.contentTypeProvider = Objects.requireNonNull(contentTypeRequest);
+        this.validLinkSuffixTest = this.createLinkSuffixTest(requiredLinkSuffixes);
+        this.invalidLinkSuffixTest = this.createLinkSuffixTest(unwantedLinkSuffixes);
         this.requiredContentTypePart = Objects.requireNonNull(requiredContentTypePart);
         this.connectTimeout = connectTimeout;
         this.readTimeout = readTimeout;
+        this.resultIfNone = resultIfNone;
+        this.linkFileEndsWithTest = new LinkFileEndsWithTest();
+    }
+    
+    private Predicate<String> createLinkSuffixTest(Set<String> linkSuffixes) {
+        final Predicate<String> linkSuffixTest;
+        if(linkSuffixes.isEmpty()) {
+            linkSuffixTest = (link) -> false;
+        }else{
+            linkSuffixTest = (link) -> {
+                final Predicate<String> endsWith = (suffix) -> linkFileEndsWithTest.test(link.toLowerCase(), suffix);
+                return linkSuffixes.stream().filter(endsWith).findAny().isPresent();
+            };
+        }
+        return linkSuffixTest;
     }
     
     @Override
-    public boolean test(String link, Boolean outputIfNone) {
+    public boolean test(String link) {
         final long mb4 = com.bc.util.Util.availableMemory();
         boolean output;
-        if(this.linkSuffixTest.test(link)) {
+        if(this.validLinkSuffixTest.test(link)) {
             output = true;
+            LOG.log(Level.FINER, "Ends with valid suffix: {0}", link);
+        }else if(this.invalidLinkSuffixTest.test(link)) {
+            output = false;
+            LOG.log(Level.FINER, "Ends with invalid suffix: {0}", link);
         }else{
-            output = this.hasRequiredContentType(link, outputIfNone);
+            output = this.hasRequiredContentType(link);
             LOG.finer(() -> "Success: " + output + ", consumed memory: " + 
                     (com.bc.util.Util.usedMemory(mb4)) + ", checking content of: " + link);
         }
         return output;
     }
     
-    public boolean hasRequiredContentType(String link, Boolean outputIfNone) {
-        boolean output;
-        final URLConnection conn = connectionProvider.of(link, false, null);
-        if(conn == null) {
-            output = outputIfNone;
-        }else{
-            conn.setConnectTimeout(connectTimeout);
-            conn.setReadTimeout(readTimeout);
-            final String contentType = conn.getContentType();
-            if (contentType == null) {
-                output = outputIfNone;
-            } else {
-                output = contentType.toLowerCase().contains(this.requiredContentTypePart);
-            }
+    public boolean hasRequiredContentType(String link) {
+        final boolean output;
+        final String contentType = contentTypeProvider.apply(link, null);
+        if (contentType == null) {
+            output = resultIfNone;
+        } else {
+            output = contentType.toLowerCase().contains(this.requiredContentTypePart);
         }
         return output;
     }
-    
-    private boolean endsWith(String link, String extension) {
-        boolean accept = false;
-        if (link.endsWith(extension)) {
-            accept = true;
-        } else {
-            final int offset = link.lastIndexOf('/');
-            if (link.indexOf(extension + "?", offset) != -1) {
-                accept = true;
-            }
-        }
-        return accept;
-    }
 
-    public final ConnectionProvider getConnectionProvider() {
-        return connectionProvider;
+    public final ContentTypeRequest getContentTypeProvider() {
+        return contentTypeProvider;
     }
 
     public final String getRequiredContentTypePart() {
@@ -115,7 +116,7 @@ public class LinkContentTest implements Serializable, BiPredicate<String, Boolea
     }
 
     public final Predicate<String> getLinkSuffixTest() {
-        return linkSuffixTest;
+        return validLinkSuffixTest;
     }
 
     public final int getConnectTimeout() {

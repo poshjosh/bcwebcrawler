@@ -33,7 +33,7 @@ public class LinkQueueImpl<E> extends MultiQueue<E> implements LinkQueue<E> {
 
     private final Predicate<E> isPreferred;
     
-    public LinkQueueImpl(Predicate<E> isPreferred, LinkedBlockingQueueWithTimedPeek<E>... chain) {
+    public LinkQueueImpl(Predicate<E> isPreferred, BlockingQueue<E>... chain) {
         super(chain);
         if(chain.length < 2) {
             throw new IllegalArgumentException();
@@ -44,15 +44,8 @@ public class LinkQueueImpl<E> extends MultiQueue<E> implements LinkQueue<E> {
     
     @Override
     public boolean add(E e) {
-        final Queue<E> target;
-        if(this.isEmpty()) {
-            target = this.getPageAt(0);
-        }else if(this.isPreferred.test(e)) {    
-            target = this.getPageAt(0);
-        }else{
-            target = this.getPageAt(1);
-        }
-
+        final int pageIndex = this.isPreferred.test(e) || this.getQueueCount() <= 1 ? 0 : 1;
+        final Queue<E> target = this.getQueueAt(pageIndex);
         return target.add(e);
     }
     
@@ -63,11 +56,6 @@ public class LinkQueueImpl<E> extends MultiQueue<E> implements LinkQueue<E> {
     }
 
     @Override
-    public E peek(long timeout, TimeUnit timeUnit, E outputIfNone) {
-        return this.waitForFirstLink(false, timeout, timeUnit, outputIfNone);
-    }
-
-    @Override
     public E poll(E outputIfNone) {
         final E found = this.poll();
         return found == null ? outputIfNone : found;
@@ -75,58 +63,35 @@ public class LinkQueueImpl<E> extends MultiQueue<E> implements LinkQueue<E> {
 
     @Override
     public E poll(long timeout, TimeUnit timeUnit, E outputIfNone) {
-        return this.waitForFirstLink(true, timeout, timeUnit, outputIfNone);
-    }
-    
-    public E waitForFirstLink(boolean remove, long timeout, TimeUnit timeUnit, E outputIfNone) {
         try{
-            final long tb4 = System.currentTimeMillis();
-            final E link;
-            if(timeout <= 0L) {
-                link = this.isEmpty() ? outputIfNone : remove ? this.poll() : this.peek();
-            }else if(!this.isEmpty()) {
-                link = remove ? super.poll() : super.peek();
-            }else{
-                
-                LOG.finer(() -> "Will wait at most " + timeout + " millis for link at position zero");
-                
-                link = remove ? this.poll(timeout, timeUnit) : this.peek(timeout, timeUnit);
-                
-                LOG.finer(() -> "Waited " + (System.currentTimeMillis() - tb4) + 
-                        " millis for link at position zero: " + link);
-            }
-            return link == null ? outputIfNone : link;
+            final E result = this.poll(timeout, timeUnit);
+            return result == null ? outputIfNone : result;
         }catch(InterruptedException e) {
-            LOG.log(Level.WARNING, null, e);
+            LOG.log(Level.WARNING, "{0}", e.toString());
+            LOG.log(Level.FINE, null, e);
             return outputIfNone;
         }
     }
 
     public E take() throws InterruptedException {
-        final BlockingQueue<E> queue = (BlockingQueue)this.getFirstNonEmptyQueue(getPageAt(0));
+        final BlockingQueue<E> queue = (BlockingQueue)this.getFirstNonEmptyQueue(getQueueAt(0));
         final E output = queue.take();
         return output;
     }
 
     public boolean offer(E e, long timeout, TimeUnit timeUnit) throws InterruptedException {
         final boolean output;
-        if(this.getPageCount() == 0) {
+        if(this.getQueueCount() == 0) {
             output = false;
         }else {
-            output = ((BlockingQueue)getPageAt(getPageCount() - 1)).offer(e, timeout, timeUnit);
+            output = ((BlockingQueue)getQueueAt(getQueueCount() - 1)).offer(e, timeout, timeUnit);
         }
         return output;
     }
 
     public E poll(long timeout, TimeUnit timeUnit) throws InterruptedException {
-        final BlockingQueue<E> queue = (BlockingQueue)this.getFirstNonEmptyQueue(this.getPageAt(0));
+        final BlockingQueue<E> queue = (BlockingQueue)this.getFirstNonEmptyQueue(this.getQueueAt(0));
         final E output = queue.poll(timeout, timeUnit);
         return output;
-    }
-    
-    public E peek(long timeout, TimeUnit timeUnit) throws InterruptedException {
-        final LinkedBlockingQueueWithTimedPeek<E> queue = 
-                (LinkedBlockingQueueWithTimedPeek<E>)this.getFirstNonEmptyQueue(this.getPageAt(0));
-        return queue.peek(timeout, timeUnit);
     }
 }

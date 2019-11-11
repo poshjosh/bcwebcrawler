@@ -18,7 +18,6 @@ package com.bc.webcrawler;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -39,11 +38,9 @@ public interface Crawler<E> extends Iterator<E> {
     
     void shutdown(long timeout, TimeUnit timeUnit);    
     
-    List<String> getSeedUrls();
-    
     Optional<String> getCurrentUrl();
     
-    CrawlMetaData getMetaData();
+    CrawlSnapshot getSnapshot();
     
     /**
      * <p><b>May return <code>null</code></b></p>
@@ -55,17 +52,12 @@ public interface Crawler<E> extends Iterator<E> {
     default E next() {
         try{
             return parseNext();
-        }catch(IOException e) {
-            if(CRAWLER_LOGGER.isLoggable(Level.FINE)) {
-                CRAWLER_LOGGER.log(Level.WARNING, null, e); 
-            }else{
-                CRAWLER_LOGGER.warning(e.toString());
-            }
-            return null;
+        }catch(IOException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
     
-    E parseNext() throws IOException;
+    E parseNext() throws IOException, InterruptedException;
 
     default Stream<E> stream() {
         return StreamSupport.stream(

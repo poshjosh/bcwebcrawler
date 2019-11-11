@@ -1,17 +1,19 @@
 package com.bc.webcrawler.predicates;
 
-import java.util.Arrays;
 import java.util.HashSet;
-import com.bc.webcrawler.ConnectionProvider;
+import com.bc.webcrawler.ContentTypeRequest;
 
 public class LinkContentIsHtmlTest extends LinkContentTest {
     
     public LinkContentIsHtmlTest(
-            ConnectionProvider connectionProvider,
-            int connectTimeout, int readTimeout) {
+            ContentTypeRequest contentTypeProvider,
+            int connectTimeout, int readTimeout,
+            boolean resultIfNone) {
         super(
-                connectionProvider, 
-                new HashSet(Arrays.asList(".html", ".php", ".htm", ".xhtml", ".asp", ".aspx", ".jsp", ".jspx", ".xml")), 
-                "html", connectTimeout, readTimeout);
+                contentTypeProvider, 
+                new HashSet(new Extensions().forMulti(Extensions.HTML, Extensions.SERVER_PAGE)), 
+                new HashSet(new Extensions().forMulti(Extensions.IMAGE, Extensions.AUDIO, 
+                        Extensions.VIDEO, Extensions.DOCUMENT)), 
+                "html", connectTimeout, readTimeout, resultIfNone);
     }
 }

@@ -16,6 +16,9 @@
 
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.links.LinkCollectionContext;
+import com.bc.webcrawler.links.LinkCollectionContextBuilder;
+import com.bc.webcrawler.links.LinkCollector;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -25,25 +28,26 @@ import java.util.function.UnaryOperator;
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 5:59:31 PM
  */
-public interface CrawlerContextBuilder<E> {
+public interface CrawlerContextBuilder<E> extends LinkCollectionContextBuilder<E>{
+    
+    CrawlerContextBuilder<E> linkCollectionContext(LinkCollectionContext<E> linkCollectionContext);
+    
+    CrawlerContextBuilder<E> baseUrl(String url);
 
     CrawlerContextBuilder<E> batchInterval(long batchInterval);
 
     CrawlerContextBuilder<E> batchSize(int batchSize);
 
+    @Override
     CrawlerContext<E> build();
 
-    CrawlerContextBuilder<E> crawlLimit(long crawlLimit);
-
-    CrawlerContextBuilder<E> linksExtractor(Function<E, Set<String>> linksExtractor);
+    CrawlerContextBuilder<E> linkCollector(LinkCollector<E> linkCollector);
     
     CrawlerContextBuilder<E> maxFailsAllowed(int maxFailsAllowed);
 
     CrawlerContextBuilder<E> parseLimit(long parseLimit);
     
     CrawlerContextBuilder<E> preferredLinkTest(Predicate<String> preferredLinkTest);
-
-    CrawlerContextBuilder<E> resumeHandler(ResumeHandler resumeHandler);
 
     CrawlerContextBuilder<E> retryOnExceptionTestSupplier(Supplier<Predicate<Throwable>> retryOnExceptionTestSupplier);
 
@@ -55,11 +59,32 @@ public interface CrawlerContextBuilder<E> {
 
     CrawlerContextBuilder<E> urlFormatter(UnaryOperator<String> urlFormatter);
 
-    CrawlerContextBuilder<E> connectionProvider(ConnectionProvider connProvider);
-    
     CrawlerContextBuilder<E> urlParser(UrlParser urlParser);
 
     CrawlerContextBuilder<E> parseUrlTest(Predicate<String> urlTest);
     
-    CrawlerContextBuilder<E> crawlUrlTest(Predicate<String> urlTest);
+    //
+    //
+
+    @Override
+    public CrawlerContextBuilder<E> contentTypeRequest(ContentTypeRequest connProvider);
+
+    @Override
+    public CrawlerContextBuilder<E> crawlUrlTest(Predicate<String> urlTest);
+
+    @Override
+    public CrawlerContextBuilder<E> resumeHandler(ResumeHandler resumeHandler);
+
+    @Override
+    public CrawlerContextBuilder<E> linksExtractor(Function<E, Set<String>> linksExtractor);
+
+    @Override
+    public CrawlerContextBuilder<E> crawlLimit(long crawlLimit);
+
+    @Override
+    public CrawlerContextBuilder<E> asyncLinkCollection(boolean asyncLinkCollection);
+
+    @Override
+    public CrawlerContextBuilder<E> attemptedLinkBuffer(Buffer<String> buffer);
+    
 }

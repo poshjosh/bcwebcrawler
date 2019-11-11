@@ -17,25 +17,21 @@
 package com.bc.webcrawler;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 8:15:45 AM
+ * @todo The getCookie methods return cookies from across all domains
+ * but collapses them as a single list or map. This will result in conflict
+ * where multiple cookies have the same name? To avert this conflict,
+ * cookies should be returned as per domain
  */
 public interface UrlParser<E> {
 
     E parse(String url) throws IOException;
     
-    default List<String> getCookieList() {
-        final Map<String, String> cookies = this.getCookies();
-        final List<String> cookieList = new ArrayList(cookies.size());
-        cookies.forEach((key, val) -> {
-            cookieList.add(key + '=' + val + ';');
-        });
-        return cookieList;
-    }
+    List<String> getCookieNameValueList();
     
-    Map<String, String> getCookies();
+    Map<String, String> getCookieNameValueMap();
 }

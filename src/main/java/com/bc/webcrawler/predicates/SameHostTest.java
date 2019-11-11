@@ -41,8 +41,29 @@ public class SameHostTest implements Predicate<String> {
     @Override
     public boolean test(String link) {
         try{
-            final URL url = new URL(link);
-            return Objects.equals(this.targetHost, this.getHost(url));
+            final String otherHost = this.getHost(new URL(link));
+            if(Objects.equals(this.targetHost, otherHost)) {
+                return true;
+            }else if(this.targetHost == null){
+                return false;
+            }else if(otherHost == null){
+                return false;
+            }else{    
+                final String regex = "\\.";
+                final String [] lhs = this.targetHost.split(regex);
+                final String [] rhs = otherHost.split(regex);
+                if(lhs.length < 2) {
+                    throw new MalformedURLException(this.targetHost);
+                }
+                if(rhs.length < 2) {
+                    throw new MalformedURLException(otherHost);
+                }
+                final boolean lastEquals = Objects.equals(lhs[lhs.length - 1], rhs[rhs.length - 1]);
+                if(!lastEquals) {
+                    return false;
+                }
+                return Objects.equals(lhs[lhs.length - 2], rhs[rhs.length - 2]);
+            }
         }catch(MalformedURLException e) {
             LOG.fine(e.toString());
             return false;

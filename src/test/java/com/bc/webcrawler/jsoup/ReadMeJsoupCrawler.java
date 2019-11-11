@@ -17,11 +17,11 @@
 package com.bc.webcrawler.jsoup;
 
 import com.bc.util.Util;
-import com.bc.webcrawler.CrawlMetaData;
+import com.bc.webcrawler.ContentTypeRequestOkHttp;
 import com.bc.webcrawler.Crawler;
 import com.bc.webcrawler.CrawlerContext;
 import com.bc.webcrawler.ResumeHandler;
-import com.bc.webcrawler.ResumeHandlerInMemoryCache;
+import com.bc.webcrawler.ResumeHandlerInMemoryStore;
 import com.bc.webcrawler.UrlParser;
 import com.bc.webcrawler.UserAgentProvider;
 import java.io.IOException;
@@ -29,10 +29,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -46,6 +48,12 @@ import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import com.bc.webcrawler.CrawlSnapshot;
+import com.bc.webcrawler.CrawlerImpl;
+import com.bc.webcrawler.links.LinkCollectionContext;
+import com.bc.webcrawler.links.LinkCollector;
+import com.bc.webcrawler.links.LinkCollectorAsync;
+import java.util.function.Consumer;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 6:03:12 PM
@@ -119,19 +127,21 @@ public class ReadMeJsoupCrawler {
 
             return doc;
         }
+        
+        @Override
+        public List<String> getCookieNameValueList() {
+            final List<String> result = new ArrayList<>(cookies.size());
+            cookies.forEach((k, v) -> result.add(k + '=' + v));
+            return result;
+        }
 
         @Override
-        public Map<String, String> getCookies() {
+        public Map<String, String> getCookieNameValueMap() {
             return new LinkedHashMap(cookies);
         }
     }
     
     public static void main(String... args) throws IOException {
-        
-//        try(final InputStream in = Thread.currentThread().getContextClassLoader()
-//                .getResourceAsStream("META-INF/configs/logging.properties")) {
-//            LogManager.getLogManager().readConfiguration(in);
-//        }
         
         final int connectTimeout = 10_000;
         final int readTimeout = 20_000;
@@ -143,12 +153,15 @@ public class ReadMeJsoupCrawler {
 //        parser = new UrlParserImpl(connectTimeout, readTimeout);
 //        parser = new OkHttpUrlParser(connectTimeout, readTimeout);
         
-        final String baseUrl = "http://www.buzzwears.com";
+//https://www.jumia.com.ng/andrea-hair-growth-essence-beard-oil-growth-22599590.html
+
+        final String baseUrl = "https://www.jumia.com.ng/"; //http://www.buzzwears.com";
         final String startUrl = baseUrl;
-        final Pattern linkToScrappPattern = Pattern.compile("\\d{1,}_"); //Pattern.compile(".*");
+//        final Pattern linkToScrappPattern = Pattern.compile(".*");
+        final Pattern linkToScrappPattern = Pattern.compile("\\d{1,}\\.html");//Pattern.compile("\\d{1,}_");
         final Predicate<String> linkToScrappTest = (link) -> linkToScrappPattern.matcher(link).find();
         
-        final ResumeHandler resumeHandler = new ResumeHandlerInMemoryCache(
+        final ResumeHandler resumeHandler = new ResumeHandlerInMemoryStore(
                 Collections.EMPTY_SET
         );
         
@@ -166,19 +179,45 @@ public class ReadMeJsoupCrawler {
         
         final int n = 1;
         
-        final CrawlerContext<Document> context = CrawlerContext.builder(Document.class)
-                .batchInterval(3_000)
-                .batchSize(2)
-                .crawlLimit(100 * n)
+        final int crawlLimit = 100 * n;
+        
+        final LinkCollectionContext<Document> linkCtx = LinkCollectionContext.builder(Document.class)
+                .contentTypeRequest(new ContentTypeRequestOkHttp())
+                .crawlLimit(crawlLimit)
                 .crawlUrlTest((link) -> true)
                 .linksExtractor(new JsoupLinkExtractor())
+                .resumeHandler(resumeHandler)
+                .build();
+        
+//        final LinkCollector<Document> linkCollector = linkCtx.newLinkCollector(baseUrl, true);
+        final LinkCollector<Document> linkCollector = new LinkCollectorAsync(linkCtx, baseUrl, 1, crawlLimit){
+            @Override
+            public boolean collectLink(String s, Consumer consumer) {
+                final boolean collected = super.collectLink(s, consumer); 
+                synchronized(this) {
+                    try{
+                        Thread.sleep(2_000);
+                    }catch(InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                return collected;
+            }
+        };
+        
+        final CrawlerContext<Document> context = CrawlerContext.builder(Document.class)
+                .linkCollectionContext(linkCtx)
+                .baseUrl(baseUrl)
+                .batchInterval(3_000)
+                .batchSize(2)
+                .contentTypeRequest(new ContentTypeRequestOkHttp())
+                .linkCollector(linkCollector)
                 .maxFailsAllowed(9 * n)
                 .pageIsNoIndexTest(docIsNoIndex)
                 .pageIsNoFollowTest(docIsNoFollow)
                 .parseLimit(10 * n)
                 .parseUrlTest((link) -> true)
                 .preferredLinkTest(linkToScrappTest)
-                .resumeHandler(resumeHandler)
 //                .retryOnExceptionTestSupplier(() -> new RetryConnectionFilter(2, 2_000)) 
                 .retryOnExceptionTestSupplier(() -> (exception) -> false) 
                 .timeoutMillis(3600_000 * n)
@@ -186,11 +225,25 @@ public class ReadMeJsoupCrawler {
                 .urlParser(parser)
                 .build();
                 
-        final Crawler<Document> crawler = context.newCrawler(Collections.singleton(startUrl));
+//        final Crawler<Document> crawler = context.newCrawler(Collections.singleton(startUrl));
+        final Crawler<Document> crawler = new CrawlerImpl(context, Collections.singleton(startUrl)){
+            @Override
+            public String waitAndRemoveFirstLink(String resultIfNone) {
+
+                final String link = (String)getLinkQueue().poll(null);
+
+                final String result = link == null ? resultIfNone : link;
+
+                this.setCurrentLink(result);
+
+                return result;
+            }
+        
+        };
 
         final long tb4 = System.currentTimeMillis();
         final long mb4 = Util.availableMemory();
-        System.out.println(LocalDateTime.now() + ". Memory: " + mb4);
+        System.out.println(LocalDateTime.now() + ". Memory: " + (mb4/1000) + "k");
         
         try{
             
@@ -198,12 +251,12 @@ public class ReadMeJsoupCrawler {
 
                 final Document doc = crawler.next();
 
-                final CrawlMetaData metaData = crawler.getMetaData();
+                final CrawlSnapshot metaData = crawler.getSnapshot();
 
     //            System.out.println(LocalDateTime.now());
 
                 System.out.println(MessageFormat.format(
-                        "Attempted: {0}, failed: {1}", 
+                        "\nAttempted: {0}, failed: {1}", 
                         metaData.getAttempted(), metaData.getFailed()));
 
                 if(doc == null) {
@@ -218,12 +271,19 @@ public class ReadMeJsoupCrawler {
                 final boolean isToScrapp = linkToScrappTest.test(url);
 
                 System.out.println("Scrapp: " + isToScrapp + ", URL: " + url);
-
+                
                 if(isToScrapp) {
-                    final Element idElem = doc.getElementsByAttributeValue("itemprop", "productID").first();
-                    final Element priceElem = doc.getElementsByAttributeValue("itemprop", "price").first();
-                    System.out.println("Product. ID: " + (idElem==null?null:idElem.text()) + 
-                            ", price: " + (priceElem==null?null:priceElem.text()));
+                    final Object id; 
+                    final Object price; 
+//                    final Element idElem = doc.getElementsByAttributeValue("itemprop", "productID").first();
+//                    id = (idElem==null?null:idElem.text());    
+//                    final Element priceElem = doc.getElementsByAttributeValue("itemprop", "price").first();
+//                    price = (priceElem==null?null:priceElem.text());
+                    final Element elem = doc.getElementsByAttributeValue("id", "add-to-cart").first();
+                    id = elem.attr("data-name");
+                    price = elem.attr("data-price");
+                    
+                    System.out.println("Product. ID: " + id + ", price: " + price);
                 }
             }
         }finally{
@@ -233,6 +293,6 @@ public class ReadMeJsoupCrawler {
         
         System.out.println(LocalDateTime.now() + 
                 ". Consumed. time: " + (System.currentTimeMillis() - tb4) +
-                ", Memory: " + Util.usedMemory(mb4));
+                ", Memory: " + (Util.usedMemory(mb4)/1000) + "k");
     }
 }

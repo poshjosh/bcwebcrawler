@@ -16,8 +16,9 @@
 
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.links.LinkCollectionContext;
+import com.bc.webcrawler.links.LinkCollector;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -25,7 +26,7 @@ import java.util.function.UnaryOperator;
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 4, 2017 8:07:38 PM
  */
-public interface CrawlerContext<E> {
+public interface CrawlerContext<E> extends LinkCollectionContext<E>{
 
     static <T> CrawlerContextBuilder<T> builder(Class<T> type) {
         return new CrawlerContextBuilderImpl<>();
@@ -34,12 +35,10 @@ public interface CrawlerContext<E> {
     default Crawler<E> newCrawler(Set<String> seedUrls) {
         return new CrawlerImpl(this, seedUrls);
     }
-
+    
     long getBatchInterval();
 
     int getBatchSize();
-
-    long getCrawlLimit();
     
     long getParseLimit();
     
@@ -47,14 +46,14 @@ public interface CrawlerContext<E> {
     
     int getMaxFailsAllowed();
     
+    String getBaseUrl();
+    
     default Predicate<String> getPreferredLinkTest() {
         return (link) -> false;
     }
     
-    ResumeHandler getResumeHandler();
-
     default Supplier<Predicate<Throwable>> getRetryOnExceptionTestSupplier() {
-        return () -> (t) -> false;
+        return () -> (exception) -> false;
     }
 
     default UnaryOperator<String> getUrlFormatter() {
@@ -65,21 +64,15 @@ public interface CrawlerContext<E> {
         return (link) -> true;
     }
 
-    default Predicate<String> getCrawlUrlTest() {
-        return (link) -> true;
-    }
-
     default Predicate<E> getPageIsNoIndexTest() {
-        return (doc) -> false;
+        return (page) -> false;
     }
     
     default Predicate<E> getPageIsNoFollowTest() {
-        return (doc) -> false;
+        return (page) -> false;
     }
-    
-    ConnectionProvider getConnectionProvider();
     
     UrlParser<E> getUrlParser();
     
-    Function<E, Set<String>> getLinksExtractor();
+    LinkCollector<E> getLinkCollector();
 }

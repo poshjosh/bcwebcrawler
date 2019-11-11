@@ -13,6 +13,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -76,13 +77,14 @@ public class OkHttpUrlParser implements UrlParser<Document>, CookieJar {
             .url(url)
             .build();
         
-        final Response response = this.client.newCall(request).execute();
+        try(final Response response = this.client.newCall(request).execute()) {
         
-        final ResponseBody responseBody = response.body();
+            final ResponseBody responseBody = response.body();
 
-        final Document doc = Jsoup.parse(responseBody.byteStream(), "UTF-8", link);
+            final Document doc = Jsoup.parse(responseBody.byteStream(), "UTF-8", link);
 
-        return doc;
+            return doc;
+        }
     }
 
     @Override
@@ -98,12 +100,21 @@ public class OkHttpUrlParser implements UrlParser<Document>, CookieJar {
     }
 
     @Override
-    public List<String> getCookieList() {
+    public List<String> getCookieNameValueList() {
         return Collections.unmodifiableList(new ArrayList(this.cookies));
     }
 
     @Override
-    public Map<String, String> getCookies() {
-        throw new UnsupportedOperationException();
+    public Map<String, String> getCookieNameValueMap() {
+        if(cookies.isEmpty()) {
+            return Collections.EMPTY_MAP;
+        }else{
+            final Map<String, String> cookieMap = new HashMap(cookies.size(), 1.0f);
+            cookies.stream().forEach((cookie) -> {
+                final String [] parts = cookie.split("=");
+                cookieMap.put(parts[0], parts[1]);
+            });
+            return cookieMap;
+        }
     }
 }

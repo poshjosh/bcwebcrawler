@@ -16,9 +16,8 @@
 
 package com.bc.webcrawler.predicates;
 
-import java.util.Arrays;
 import java.util.HashSet;
-import com.bc.webcrawler.ConnectionProvider;
+import com.bc.webcrawler.ContentTypeRequest;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 7:04:47 PM
@@ -26,11 +25,14 @@ import com.bc.webcrawler.ConnectionProvider;
 public class LinkContentIsImageTest extends LinkContentTest {
 
     public LinkContentIsImageTest(
-            ConnectionProvider connectionProvider,
-            int connectTimeout, int readTimeout) {
+            ContentTypeRequest connectionProvider,
+            int connectTimeout, int readTimeout,
+            boolean resultIfNone) {
         super(
                 connectionProvider, 
-                new HashSet(Arrays.asList("jpeg", "jpg", "gif", "png", "bnp", "webp")), 
-                "image", connectTimeout, readTimeout);
+                new HashSet(new Extensions().forName(Extensions.IMAGE)), 
+                new HashSet(new Extensions().forMulti(Extensions.HTML, Extensions.SERVER_PAGE, 
+                        Extensions.AUDIO, Extensions.VIDEO, Extensions.DOCUMENT)), 
+                "image", connectTimeout, readTimeout, resultIfNone);
     }
 }

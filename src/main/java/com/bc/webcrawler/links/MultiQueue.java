@@ -20,14 +20,13 @@ import java.util.AbstractQueue;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.logging.Logger;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Aug 4, 2018 9:44:52 PM
  */
 public class MultiQueue<E> extends AbstractQueue<E> {
 
-    private transient static final Logger LOG = Logger.getLogger(MultiQueue.class.getName());
+//    private transient static final Logger LOG = Logger.getLogger(MultiQueue.class.getName());
 
     private final Queue<E> [] pages;
     
@@ -40,11 +39,11 @@ public class MultiQueue<E> extends AbstractQueue<E> {
      * @param pageIndex The pageIndex whose page will be returned
      * @return The queue at the specified index
      */
-    public Queue<E> getPageAt(int pageIndex) {
+    public Queue<E> getQueueAt(int pageIndex) {
         return this.pages[pageIndex];
     }
     
-    public int getPageCount() {
+    public int getQueueCount() {
         return pages.length;
     }
     
@@ -53,7 +52,7 @@ public class MultiQueue<E> extends AbstractQueue<E> {
      * @param index The index of the item whose containing queue will be returned
      * @return The queue containing the item at the specified index
      */
-    public Queue<E> getPageFor(int index) {
+    public Queue<E> getQueueFor(int index) {
         int pos = index;
         for(Queue<E> queue : this.pages) {
             final int size = queue.size();
@@ -82,7 +81,7 @@ public class MultiQueue<E> extends AbstractQueue<E> {
     @Override
     public boolean contains(Object o) {
         for(int pageIndex=0; pageIndex<this.pages.length; pageIndex++) {
-            final Queue page = this.getPageAt(pageIndex);
+            final Queue page = this.getQueueAt(pageIndex);
             if(page.contains(o)) {
                 return true;
             }

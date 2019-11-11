@@ -1,14 +1,16 @@
 package com.bc.webcrawler;
 
 import com.bc.net.RetryConnectionFilter;
-import com.bc.net.impl.RequestBuilderImpl;
+import com.bc.net.util.UserAgents;
 import com.bc.util.Util;
 import com.bc.webcrawler.predicates.HtmlLinkIsToBeCrawledTest;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.logging.LogManager;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.MutableAttributeSet;
 import javax.swing.text.SimpleAttributeSet;
@@ -32,7 +33,7 @@ import org.junit.Test;
 /**
  * @author Chinomso Bassey Ikwuagwu on Mar 23, 2018 8:25:09 AM
  */
-public class ReadMeDOMCrawlerTest {
+public class ReadMeDOMCrawlerTest extends TestBase {
 
     public final static class Node {
         public final int pos;
@@ -122,6 +123,7 @@ public class ReadMeDOMCrawlerTest {
     }
     
     public static class UrlParserImpl implements UrlParser<List<Node>> {
+        private final UserAgents userAgents = new UserAgents();
         private final ParserDelegator parserDelegator;
         private final ParserCallbackImpl parserCallback;
         public UrlParserImpl() {
@@ -130,20 +132,24 @@ public class ReadMeDOMCrawlerTest {
         }
         @Override
         public List<Node> parse(String link) throws IOException {
+            
             this.parserCallback.reset();
-            final URL url;
-            url = new URL(null, link, new com.bc.net.util.HttpStreamHandlerForBadStatusLine());
-//            url = new URL(link);
-            final RequestBuilderImpl req = new RequestBuilderImpl();
-            final com.bc.net.Response res = req
-                    .charset(StandardCharsets.UTF_8.name())
-                    .randomUserAgent(true)
-                    .response(url);
             
-            System.out.println("Response. Code: " + res.getCode() + ", message: " + 
-                    res.getMessage() + ", cookies: " + res.getCookies() + ", link: " + link);
+            final URL url = new URL(null, link, new com.bc.net.util.HttpStreamHandlerForBadStatusLine());
+//            final URL url = new URL(link);
+            final URLConnection conn = url.openConnection();
+            final Charset charset = StandardCharsets.UTF_8;
+            conn.setRequestProperty("Accept-Charset", charset.name());
+            conn.setRequestProperty("User-Agent", userAgents.any(link));
+            if(conn instanceof HttpURLConnection) {
+                final HttpURLConnection httpConn = (HttpURLConnection)conn;
+                System.out.println("Response. Code: " + httpConn.getResponseCode() + 
+                        ", message: " + httpConn.getResponseMessage() + ", link: " + link);
+            }else{
+                System.out.println("Link: " + link);
+            }
             
-            try(Reader reader = new InputStreamReader(res.getInputStream(), StandardCharsets.UTF_8)) {
+            try(Reader reader = new InputStreamReader(conn.getInputStream(), charset)) {
                 this.parserDelegator.parse(reader, this.parserCallback, true);
             }
 //            try(InputStream in = url.openStream();
@@ -152,20 +158,18 @@ public class ReadMeDOMCrawlerTest {
 //            }
             return this.parserCallback.getNodeList();
         }
+
         @Override
-        public Map<String, String> getCookies() {
+        public List<String> getCookieNameValueList() {
+            return Collections.EMPTY_LIST;
+        }
+        @Override
+        public Map<String, String> getCookieNameValueMap() {
             return Collections.EMPTY_MAP;
         }
     }
 
-    public ReadMeDOMCrawlerTest() {
-        final ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        try(InputStream ins = loader.getResourceAsStream("META-INF/logging.properties")) {
-            LogManager.getLogManager().readConfiguration(ins);
-        }catch(IOException e) {
-            e.printStackTrace();
-        }
-    }
+    public ReadMeDOMCrawlerTest() { }
     
     @Test
     public void test() {
@@ -173,7 +177,7 @@ public class ReadMeDOMCrawlerTest {
 //        new ReadMeDOMCrawlerTest().crawl("http://www.buzzwears.com");
 
         final Predicate<String> guardianPreferredLink = (link) -> link.contains("/news/");
-        new ReadMeDOMCrawlerTest().crawl("http://guardian.ng/", guardianPreferredLink);
+        new ReadMeDOMCrawlerTest().crawl("https://guardian.ng/", guardianPreferredLink);
     }
 
     public void crawl(String startUrl) {
@@ -182,23 +186,16 @@ public class ReadMeDOMCrawlerTest {
     
     public void crawl(String startUrl, Predicate<String> preferredLinkTest) {
         
-        final UrlParser<List<Node>> urlParser = new UrlParserImpl();
-        
-        final ConnectionProvider urlConnProvider = 
-                new ConnectionProviderImpl(() -> urlParser.getCookieList());
+        final ContentTypeRequest contentTypeReq = new ContentTypeRequestOkHttp();
     
         final Predicate<String> crawlHtmlLinks = new HtmlLinkIsToBeCrawledTest(
-                urlConnProvider, urlParser, 7_000, 7_000, true);
+                contentTypeReq, 7_000, 7_000, true);
         
-        final boolean asyncLinkCollection = true;
+        final UrlParser<List<Node>> urlParser = new UrlParserImpl();
         
-//        final CrawlerContext<List> crawlerContext = CrawlerContext.builder(List.class)
-        final CrawlerContext<List> crawlerContext = new CrawlerContextBuilderImpl<List>(){
-            @Override
-            public Crawler<List> newCrawler(Set<String> seedUrls) {
-                return new CrawlerImpl(this, seedUrls, asyncLinkCollection);
-            }
-        }
+        final CrawlerContext<List> crawlerContext = CrawlerContext.builder(List.class)
+                .asyncLinkCollection(true)
+                .baseUrl(startUrl)
                 .batchInterval(5_000)
                 .batchSize(5)
                 .crawlLimit(100)
@@ -210,14 +207,14 @@ public class ReadMeDOMCrawlerTest {
                 .parseLimit(10)
                 .parseUrlTest((url) -> true)
                 .preferredLinkTest(preferredLinkTest)
-                .resumeHandler(new ResumeHandlerInMemoryCache(Collections.EMPTY_SET))
+                .resumeHandler(new ResumeHandlerInMemoryStore(Collections.EMPTY_SET))
                 .retryOnExceptionTestSupplier(() -> new RetryConnectionFilter(2, 2_000L))
                 .timeoutMillis(20_000)
                 .urlFormatter((url) -> url)
                 .urlParser(urlParser)
                 .build();
 
-        final Crawler<List> crawler = crawlerContext.newCrawler(Collections.singleton(startUrl));    
+      final Crawler<List> crawler = crawlerContext.newCrawler(Collections.singleton(startUrl));    
 
         final long mb4 = Util.availableMemory();
         final long tb4 = System.currentTimeMillis();

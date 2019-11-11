@@ -15,41 +15,20 @@
  */
 package com.bc.webcrawler.predicates;
 
-import com.bc.util.Util;
-import com.bc.webcrawler.SampleValues;
+import com.bc.webcrawler.predicates.deprecated.LinkStartsWithTargetLinkTest;
 import java.net.MalformedURLException;
 import java.util.function.Predicate;
-import org.junit.Test;
 
 /**
  *
  * @author Josh
  */
-public class LinkStartsWithTargetLinkTestTest {
+public class LinkStartsWithTargetLinkTestTest extends SameHostTestTest {
     
     public LinkStartsWithTargetLinkTestTest() { }
     
-    /**
-     * Test of test method, of class LinkStartsWithTargetLinkTest.
-     * @throws java.net.MalformedURLException
-     */
-    @Test
-    public void testTest() throws MalformedURLException {
-        System.out.println("test");
-        
-        final long mb4 = Util.availableMemory();
-        final long tb4 = System.currentTimeMillis();
-
-        final Predicate<String> instance = new LinkStartsWithTargetLinkTest(SampleValues.getRandomLink());
-        
-        for(int i=0; i<100; i++) {
-            
-            final String link = SampleValues.getRandomLink();
-            
-            instance.test(link);
-        }
-        
-        System.out.println("Consumed. Memory: " + Util.usedMemory(mb4) +
-                ", time: " + (System.currentTimeMillis() - tb4));
+    @Override
+    public Predicate<String> newPredicate(String str) throws MalformedURLException {
+        return new LinkStartsWithTargetLinkTest(str);
     }
 }

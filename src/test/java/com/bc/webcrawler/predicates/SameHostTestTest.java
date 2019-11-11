@@ -16,16 +16,18 @@
 package com.bc.webcrawler.predicates;
 
 import com.bc.util.Util;
-import com.bc.webcrawler.SampleValues;
+import com.bc.webcrawler.TestBase;
 import java.net.MalformedURLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Predicate;
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
 /**
- *
  * @author Josh
  */
-public class SameHostTestTest {
+public class SameHostTestTest extends TestBase {
     
     public SameHostTestTest() { }
     
@@ -40,16 +42,49 @@ public class SameHostTestTest {
         final long mb4 = Util.availableMemory();
         final long tb4 = System.currentTimeMillis();
         
-        final Predicate<String> instance = new SameHostTest(SampleValues.getRandomLink());
+        final String lhs = "http://www.google.com"; 
+        final Map<String, Boolean> params = new HashMap<>();
+        params.put("https://www.google.com", Boolean.TRUE);
+        params.put("https://www.google.com/", Boolean.TRUE);
+        params.put("https://mail.google.com/", Boolean.TRUE);
+        params.put("https://google.com/", Boolean.TRUE);
+        params.put("https://auth.mail.google.com/", Boolean.TRUE);
+        params.put("https://googlemail.com/", Boolean.FALSE);
+        params.put("https://com.google", Boolean.FALSE);
+        params.put("https://www.google", Boolean.FALSE);
         
-        for(int i=0; i<100; i++) {
-            
-            final String link = SampleValues.getRandomLink();
-            
-            instance.test(link);
-        }
+        this.test(lhs, params);
 
         System.out.println("Consumed. Memory: " + Util.usedMemory(mb4) +
                 ", time: " + (System.currentTimeMillis() - tb4));
+        
+        final String left = getRandomLink();
+        final Predicate<String> test = this.newPredicate(lhs);
+        for(int i=0; i<10; i++) {
+            final String right = getRandomLink();
+            System.out.println("Result: " + test.test(right) + ", LHS: " + left + ", RHS: " + right);
+        }
+    }
+    
+    public void test(String lhs, Map<String, Boolean> params) throws MalformedURLException {
+        
+        final Predicate<String> instance = this.newPredicate(lhs);
+        
+        for(String key : params.keySet()) {
+            
+            final Boolean expResult = params.get(key);
+            
+            final Boolean result = instance.test(key);
+
+            final String msg = "\nLHS: " + lhs + "\nRHS: " + key + "\nExpected: " + expResult + ". Found: " + result;
+            
+            System.out.println(msg);
+            
+            assertEquals(msg, expResult, result);
+        }
+    }
+    
+    public Predicate<String> newPredicate(String str) throws MalformedURLException {
+        return new SameHostTest(str);
     }
 }

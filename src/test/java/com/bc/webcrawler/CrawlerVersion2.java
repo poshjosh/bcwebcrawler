@@ -1,55 +1,41 @@
-/*
- * Copyright 2017 NUROX Ltd.
- *
- * Licensed under the NUROX Ltd Software License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.looseboxes.com/legal/licenses/software.html
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.bc.webcrawler;
 
-import com.bc.webcrawler.links.LinkQueueImpl;
-import com.bc.webcrawler.links.LinkCollector;
-import com.bc.webcrawler.links.LinkQueue;
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
 import com.bc.util.Util;
+import com.bc.webcrawler.links.LinkCollector;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.text.MessageFormat;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class CrawlerImpl<E> implements Serializable, 
-        Crawler<E>, CrawlSnapshot {
+/**
+ * @author USER
+ */
+public class CrawlerVersion2<E> implements Serializable, Crawler<E>, CrawlSnapshot {
     
-    private transient static final Logger LOG = Logger.getLogger(CrawlerImpl.class.getName());
+    private transient static final Logger LOG = Logger.getLogger(CrawlerVersion2.class.getName());
     
     private final CrawlerContext<E> context;
 
-    private final Buffer<String> attempted;
+    private final Set<String> attempted;
 
     private final Set<String> failed;
 
-    private final LinkQueue<String> linkQueue;
+    private final BlockingQueue<String> links;
 
     private final Set<String> robotsExcludedLinks;
     
@@ -63,33 +49,19 @@ public class CrawlerImpl<E> implements Serializable,
     
     private boolean shutdownAttempted;
     
-    private String currentLink;
-
-    public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrls) {
+    public CrawlerVersion2(CrawlerContext<E> context, BlockingQueue<String> links) {
 
         LOG.finer("Creating");
         
         this.context = Objects.requireNonNull(context);
         
-        if(seedUrls.isEmpty()) {
-            throw new IllegalArgumentException();
-        }
+        this.links = Objects.requireNonNull(links);
         
-        final int crawlLimit = (int)this.context.getCrawlLimit();
-        
-        this.linkQueue = new LinkQueueImpl(
-                context.getPreferredLinkTest(),
-                new LinkedBlockingQueue(new LinkedHashSet(seedUrls)), 
-                new LinkedBlockingQueue(crawlLimit <= 0 ? 1 : crawlLimit));
-        
-        LOG.fine(() -> "URL queue capacity: " + crawlLimit +
-                ", " + seedUrls.size() + " seed URLs");
-        
-        this.attempted = Objects.requireNonNull(context.getAttemptedLinkBuffer());
-
-        this.collectCrawledLink = (link) -> linkQueue.add(link);
-
         this.linkCollector = Objects.requireNonNull(context.getLinkCollector());
+        
+        this.collectCrawledLink = (link) -> this.links.add(link);
+
+        this.attempted = new HashSet();
 
         this.failed = new HashSet();
 
@@ -119,8 +91,6 @@ public class CrawlerImpl<E> implements Serializable,
         LOG.log(Level.FINE, "SHUTTING DOWN {0}", this);
         
         this.linkCollector.shutdown(timeout, timeUnit);
-        
-        this.context.getAttemptedLinkBuffer().delete();
     }
     
     @Override
@@ -150,7 +120,7 @@ public class CrawlerImpl<E> implements Serializable,
         
         while(this.mayParseNext()) {
             
-            final String next = this.waitAndRemoveFirstLink(null);
+            final String next = this.remove(null);
             
             if(next == null) {
                 break;
@@ -166,7 +136,7 @@ public class CrawlerImpl<E> implements Serializable,
             
                 LOG.log(Level.FINE, "Rejected by ParseURLTest, URL: ", next);
 
-                linkQueue.poll(null);
+                this.remove(null);
             }
         }
 
@@ -178,7 +148,7 @@ public class CrawlerImpl<E> implements Serializable,
     }
     
     @Override
-    public E parseNext() throws IOException {
+    public E parseNext() throws IOException, InterruptedException {
 
         if(this.startTime < 0) {
             this.startTime = System.currentTimeMillis();
@@ -202,9 +172,9 @@ public class CrawlerImpl<E> implements Serializable,
             waitBeforeNextBatch(context.getBatchInterval());
         }
 
-        final String nextLink = this.getCurrentLink();
+        final String nextLink = this.getNextLink();
         
-        final String rawUrl = nextLink == null ? this.waitAndRemoveFirstLink(null) : nextLink;
+        final String rawUrl = nextLink == null ? this.poll(null) : nextLink;
         
         if(rawUrl == null) {
             
@@ -296,7 +266,7 @@ public class CrawlerImpl<E> implements Serializable,
     public boolean isWithinCrawlLimit() {
         final boolean withinLimit = isWithLimit(this.getCrawled(), this.context.getCrawlLimit());
         LOG.finest(() -> MessageFormat.format("URLs: {0}, limit: {1}, within crawl limit: {2}", 
-                this.linkQueue.size(), this.context.getCrawlLimit(), withinLimit));
+                this.links.size(), this.context.getCrawlLimit(), withinLimit));
         return withinLimit;
     }
 
@@ -359,34 +329,45 @@ public class CrawlerImpl<E> implements Serializable,
         return mayProceed;
     }
     
-    public String waitAndRemoveFirstLink(String resultIfNone) {
+    public String remove(String resultIfNone) {
+        try{
+            return poll(resultIfNone);
+        }catch(InterruptedException e) {
+            LOG.log(Level.WARNING, "{0}", e.toString());
+            LOG.log(Level.FINE, null, e);
+            return resultIfNone;
+        }
+    }
+    
+    public String poll(String resultIfNone) throws InterruptedException{
 
         final long timeoutMillis = this.getPollTimeout();
         
         final long tb4 = System.currentTimeMillis();
         final String link;
-        if(timeoutMillis <= 0L) {
-            link = linkQueue.isEmpty() ? resultIfNone : linkQueue.poll(resultIfNone);
-        }else if(!linkQueue.isEmpty()) {
-            link = linkQueue.poll(resultIfNone);
+        if( ! links.isEmpty()) {
+            link = links.poll();
         }else{
+            if(timeoutMillis <= 0L) {
+                link = resultIfNone;
+            }else{
+                LOG.finer(() -> "Queue size: " + links.size() + 
+                        ", will wait at most " + timeoutMillis + " millis for next link.");
 
-            LOG.finer(() -> "Queue size: " + linkQueue.size() + 
-                    ", will wait at most " + timeoutMillis + " millis for next link.");
+                link = links.poll(timeoutMillis, TimeUnit.MILLISECONDS);
 
-            link = linkQueue.poll(timeoutMillis, TimeUnit.MILLISECONDS, resultIfNone);
-
-            LOG.finer(() -> "Queue size: " + linkQueue.size() + ", waited " + 
-                    (System.currentTimeMillis() - tb4) + " millis for link: " + link);
+                LOG.finer(() -> "Queue size: " + links.size() + ", waited " + 
+                        (System.currentTimeMillis() - tb4) + " millis for link: " + link);
+            }
         }
         
         final String result = link == null ? resultIfNone : link;
         
-        this.setCurrentLink(result);
+        this.setNextLink(result);
         
         return result;
     }
-
+    
     public long getPollTimeout() {
         return this.context.isAsyncLinkCollection() ? this.getTimeLeftMillis(0) : 1;
     }
@@ -424,24 +405,32 @@ public class CrawlerImpl<E> implements Serializable,
         }
     }
 
+    private transient final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private String _nl;
+    public void setNextLink(String s) {
+        try{
+            lock.writeLock().lock();
+            _nl = s;
+        }finally{
+            lock.writeLock().unlock();
+        }
+    }
+    public String getNextLink() {
+        try{
+            lock.readLock().lock();
+            return _nl;
+        }finally{
+            lock.readLock().unlock();
+        }
+    }
+
     @Override
     public String getCurrentUrl(String resultIfNone) {
-        final String next = this.getCurrentLink();
+//        return linkQueue.isEmpty() ? resultIfNone : linkQueue.peek(resultIfNone);
+        final String next = this.getNextLink();
         return next == null ? resultIfNone : next;
     }
     
-    public void setCurrentLink(String s) {
-        currentLink = s;
-    }
-    
-    public String getCurrentLink() {
-        return currentLink;
-    }
-
-    public LinkQueue<String> getLinkQueue() {
-        return linkQueue;
-    }
-
     @Override
     public int getFailed() {
         return this.failed.size();
@@ -449,7 +438,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public int getRemaining() {
-        return this.linkQueue.size();
+        return this.links.size();
     }
 
     @Override
@@ -469,7 +458,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public List<String> getRemainingLinks() {
-        return Arrays.asList(this.linkQueue.toArray(new String[0]));
+        return Arrays.asList(links.toArray(new String[0]));
     }
 
     @Override

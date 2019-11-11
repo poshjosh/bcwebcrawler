@@ -24,7 +24,7 @@ import java.net.URL;
 public class PrintLinks {
 
     public static void main(String... args) throws Exception{
-        for(String link : SampleValues.LINKS) {
+        for(String link : TestBase.LINKS) {
             print(new URL(link));
         }
     }

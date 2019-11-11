@@ -16,48 +16,44 @@
 
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.links.LinkCollectionContextBuilderImpl;
 import com.bc.net.RetryConnectionFilter;
-import com.bc.webcrawler.predicates.HtmlLinkIsToBeCrawledTest;
+import com.bc.webcrawler.links.LinkCollectionContext;
+import com.bc.webcrawler.links.LinkCollector;
+import com.bc.webcrawler.links.LinkCollectorAsync;
+import com.bc.webcrawler.links.LinkCollectorImpl;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-import java.util.logging.Logger;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 4, 2017 8:05:54 PM
  */
-public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerContextBuilder<E> {
+public class CrawlerContextBuilderImpl<E> extends LinkCollectionContextBuilderImpl<E> 
+        implements CrawlerContext<E>, CrawlerContextBuilder<E> {
 
-    private static final Logger logger = Logger.getLogger(CrawlerContextBuilderImpl.class.getName());
+//    private static final Logger LOG = Logger.getLogger(CrawlerContextBuilderImpl.class.getName());
 
     private boolean buildAttempted;
-    
-    private final boolean crawlQueryUrls = true;
-    
-    private final int connectTimeoutForLinkValidation = 5_000;
-    private final int readTimeoutForLinkValidation = 10_000;
     
     private int maxFailsAllowed = Integer.MAX_VALUE;
     
     private int batchSize = 10;
     private long batchInterval = 10_000;
     private long parseLimit = Long.MAX_VALUE;
-    private long crawlLimit = Long.MAX_VALUE;
     private long timeoutMillis = Long.MAX_VALUE;
+    private String baseUrl;
     
     private Predicate<String> parseUrlTest = (link) -> true;
-    private Predicate<String> crawlUrlTest;
     private UnaryOperator<String> urlFormatter = (link) -> link;
     private Supplier<Predicate<Throwable>> retryOnExceptionTestSupplier;
     private Predicate<E> pageIsNoIndexTest = (doc) -> false;
     private Predicate<E> pageIsNoFollowTest = (doc) -> false;
-    private Function<E, Set<String>> linksExtractor;
-
-    private ResumeHandler resumeHandler;
-    private ConnectionProvider connectionProvider;
+    private LinkCollector<E> linkCollector;
+    private ContentTypeRequest contentTypeRequest;
     private UrlParser<E> urlParser;
     
     private Predicate<String> preferredLinkTest = (link) -> false;
@@ -71,21 +67,16 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
         
         this.checkBuildAttempted();
         
-        if(this.resumeHandler == null) {
-            this.resumeHandler = new ResumeHandlerInMemoryCache();
-        }
+        this.buildAttempted = true;
 
+        super.build();
+        
         Objects.requireNonNull(this.urlParser);
         
-        if(this.crawlUrlTest == null) {
-            
-            this.crawlUrlTest = new HtmlLinkIsToBeCrawledTest(
-                    connectionProvider,
-                    urlParser, 
-                    connectTimeoutForLinkValidation, 
-                    readTimeoutForLinkValidation, 
-                    crawlQueryUrls
-            );
+        if(this.linkCollector == null) {
+            this.linkCollector = isAsyncLinkCollection() ? 
+                    new LinkCollectorAsync(this, baseUrl, 1, (int)this.getCrawlLimit()) :
+                    new LinkCollectorImpl(this, baseUrl);
         }
 
         return this;
@@ -95,7 +86,18 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
         if(this.buildAttempted) {
             throw new IllegalStateException("build() method may only be called once");
         }
-        this.buildAttempted = true;
+    }
+
+    @Override
+    public CrawlerContextBuilder<E> linkCollectionContext(LinkCollectionContext<E> c) {
+        this.attemptedLinkBuffer(c.getAttemptedLinkBuffer());
+        this.contentTypeRequest(c.getContentTypeRequest());
+        this.crawlLimit(c.getCrawlLimit());
+        this.crawlUrlTest(c.getCrawlUrlTest());
+        this.linksExtractor(c.getLinksExtractor());
+        this.asyncLinkCollection(c.isAsyncLinkCollection());
+        this.resumeHandler(c.getResumeHandler());
+        return this;
     }
 
     @Override
@@ -121,6 +123,17 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
     }
 
     @Override
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    @Override
+    public CrawlerContextBuilder<E> baseUrl(String baseUrl) {
+        this.baseUrl = com.bc.util.UrlUtil.getBaseURL(baseUrl);
+        return this;
+    }
+
+    @Override
     public Predicate<String> getPreferredLinkTest() {
         return preferredLinkTest;
     }
@@ -141,26 +154,15 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
         this.parseUrlTest = urlTest;
         return this;
     }
-    
+
     @Override
-    public Predicate<String> getCrawlUrlTest() {
-        return crawlUrlTest;
+    public LinkCollector<E> getLinkCollector() {
+        return linkCollector;
     }
 
     @Override
-    public CrawlerContextBuilder<E> crawlUrlTest(Predicate<String> urlTest) {
-        this.crawlUrlTest = urlTest;
-        return this;
-    }
-
-    @Override
-    public Function<E, Set<String>> getLinksExtractor() {
-        return linksExtractor;
-    }
-
-    @Override
-    public CrawlerContextBuilder<E> linksExtractor(Function<E, Set<String>> linksExtractor) {
-        this.linksExtractor = linksExtractor;
+    public CrawlerContextBuilder<E> linkCollector(LinkCollector<E> linkCollector) {
+        this.linkCollector = linkCollector;
         return this;
     }
 
@@ -187,13 +189,13 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
     }
 
     @Override
-    public ConnectionProvider getConnectionProvider() {
-        return connectionProvider;
+    public ContentTypeRequest getContentTypeRequest() {
+        return contentTypeRequest;
     }
 
     @Override
-    public CrawlerContextBuilder<E> connectionProvider(ConnectionProvider connProvider) {
-        this.connectionProvider = connProvider;
+    public CrawlerContextBuilder<E> contentTypeRequest(ContentTypeRequest connProvider) {
+        this.contentTypeRequest = connProvider;
         return this;
     }
 
@@ -209,17 +211,6 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
     }
 
     @Override
-    public ResumeHandler getResumeHandler() {
-        return resumeHandler;
-    }
-
-    @Override
-    public CrawlerContextBuilder<E> resumeHandler(ResumeHandler resumeHandler) {
-        this.resumeHandler = resumeHandler;
-        return this;
-    }
-
-    @Override
     public long getParseLimit() {
         return parseLimit;
     }
@@ -227,17 +218,6 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
     @Override
     public CrawlerContextBuilder<E> parseLimit(long parseLimit) {
         this.parseLimit = parseLimit;
-        return this;
-    }
-
-    @Override
-    public long getCrawlLimit() {
-        return crawlLimit;
-    }
-
-    @Override
-    public CrawlerContextBuilder<E> crawlLimit(long crawlLimit) {
-        this.crawlLimit = crawlLimit;
         return this;
     }
 
@@ -286,14 +266,48 @@ public class CrawlerContextBuilderImpl<E> implements CrawlerContext<E>, CrawlerC
     }
 
     @Override
+    public CrawlerContextBuilder<E> crawlLimit(long crawlLimit) {
+        super.crawlLimit(crawlLimit); 
+        return this;
+    }
+
+    @Override
+    public CrawlerContextBuilder<E> resumeHandler(ResumeHandler resumeHandler) {
+        super.resumeHandler(resumeHandler); 
+        return this;
+    }
+
+    @Override
+    public CrawlerContextBuilder<E> attemptedLinkBuffer(Buffer<String> attemptedLinkBuffer) {
+        super.attemptedLinkBuffer(attemptedLinkBuffer); 
+        return this;
+    }
+
+    @Override
+    public CrawlerContextBuilder<E> linksExtractor(Function<E, Set<String>> linksExtractor) {
+        super.linksExtractor(linksExtractor); 
+        return this;
+    }
+
+    @Override
+    public CrawlerContextBuilder<E> crawlUrlTest(Predicate<String> urlTest) {
+        super.crawlUrlTest(urlTest); 
+        return this;
+    }
+
+    @Override
+    public CrawlerContextBuilder<E> asyncLinkCollection(boolean asyncLinkCollection) {
+        super.asyncLinkCollection(asyncLinkCollection); 
+        return this;
+    }
+
+    @Override
     public String toString() {
         return CrawlerContext.class.getName() + '@' + Integer.toHexString(hashCode()) + 
-                "{crawlQueryUrls=" + crawlQueryUrls + 
-                ", parseLimit=" + parseLimit + ", crawlLimit=" + crawlLimit + 
+                "{parseLimit=" + parseLimit + 
                 ", batchSize=" + batchSize + ", batchInterval=" + batchInterval + 
                 ", timeoutMillis=" + timeoutMillis + 
-                ", connectTimeoutForLinkValidation=" + connectTimeoutForLinkValidation + 
-                ", readTimeoutForLinkValidation=" + readTimeoutForLinkValidation + 
+                "\n" + super.toString() +
                 '}';
     }
 }
