@@ -8,12 +8,9 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import java.util.Collections;
 import okhttp3.Request;
 import okhttp3.Response;
 
@@ -48,15 +45,5 @@ public class UrlParserImpl implements UrlParser<Document> {
                 return doc;
             }
         }
-    }
-
-    @Override
-    public List<String> getCookieNameValueList() {
-        return Collections.EMPTY_LIST;
-    }
-
-    @Override
-    public Map<String, String> getCookieNameValueMap() {
-        return Collections.EMPTY_MAP;
     }
 }

@@ -73,7 +73,7 @@ public class LinkCollectorAsync<E> extends LinkCollectorImpl<E> {
                 super.collectLinks(linkSet, consumer);
                 
             }catch(RuntimeException e) {
-                LOG.warning(e.toString());
+                LOG.log(Level.WARNING, e.toString(), e);
                 LOG.log(Level.FINE, "Exception collecting links", e);
             }
         });

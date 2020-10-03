@@ -16,14 +16,14 @@
 
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.links.LinkCollectionContext;
 import com.bc.webcrawler.links.LinkCollectionContextBuilder;
 import com.bc.webcrawler.links.LinkCollector;
-import java.util.Set;
-import java.util.function.Function;
+import com.bc.webcrawler.links.LinksExtractor;
+import com.bc.webcrawler.predicates.ParseUrlTest;
+import com.bc.webcrawler.predicates.PreferredLinkTest;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 5:59:31 PM
@@ -47,9 +47,9 @@ public interface CrawlerContextBuilder<E> extends LinkCollectionContextBuilder<E
 
     CrawlerContextBuilder<E> parseLimit(long parseLimit);
     
-    CrawlerContextBuilder<E> preferredLinkTest(Predicate<String> preferredLinkTest);
+    CrawlerContextBuilder<E> preferredLinkTest(PreferredLinkTest preferredLinkTest);
 
-    CrawlerContextBuilder<E> retryOnExceptionTestSupplier(Supplier<Predicate<Throwable>> retryOnExceptionTestSupplier);
+    CrawlerContextBuilder<E> retryOnExceptionTestSupplier(RetryOnExceptionTestSupplier retryOnExceptionTestSupplier);
 
     CrawlerContextBuilder<E> pageIsNoIndexTest(Predicate<E> pageIsNoIndexTest);
     
@@ -57,11 +57,11 @@ public interface CrawlerContextBuilder<E> extends LinkCollectionContextBuilder<E
     
     CrawlerContextBuilder<E> timeoutMillis(long timeoutMillis);
 
-    CrawlerContextBuilder<E> urlFormatter(UnaryOperator<String> urlFormatter);
+    CrawlerContextBuilder<E> urlFormatter(UrlFormatter urlFormatter);
 
     CrawlerContextBuilder<E> urlParser(UrlParser urlParser);
 
-    CrawlerContextBuilder<E> parseUrlTest(Predicate<String> urlTest);
+    CrawlerContextBuilder<E> parseUrlTest(ParseUrlTest urlTest);
     
     //
     //
@@ -70,13 +70,13 @@ public interface CrawlerContextBuilder<E> extends LinkCollectionContextBuilder<E
     public CrawlerContextBuilder<E> contentTypeRequest(ContentTypeRequest connProvider);
 
     @Override
-    public CrawlerContextBuilder<E> crawlUrlTest(Predicate<String> urlTest);
+    public CrawlerContextBuilder<E> crawlUrlTest(CrawlUrlTest urlTest);
 
     @Override
     public CrawlerContextBuilder<E> resumeHandler(ResumeHandler resumeHandler);
 
     @Override
-    public CrawlerContextBuilder<E> linksExtractor(Function<E, Set<String>> linksExtractor);
+    public CrawlerContextBuilder<E> linksExtractor(LinksExtractor linksExtractor);
 
     @Override
     public CrawlerContextBuilder<E> crawlLimit(long crawlLimit);

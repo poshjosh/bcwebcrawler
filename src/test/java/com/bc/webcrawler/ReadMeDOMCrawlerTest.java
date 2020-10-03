@@ -3,7 +3,10 @@ package com.bc.webcrawler;
 import com.bc.net.RetryConnectionFilter;
 import com.bc.net.util.UserAgents;
 import com.bc.util.Util;
+import com.bc.webcrawler.links.LinksExtractor;
+import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.predicates.HtmlLinkIsToBeCrawledTest;
+import com.bc.webcrawler.predicates.PreferredLinkTest;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -17,11 +20,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.MutableAttributeSet;
 import javax.swing.text.SimpleAttributeSet;
@@ -65,7 +65,7 @@ public class ReadMeDOMCrawlerTest extends TestBase {
         }
     }
     
-    public static class LinkExtractorImpl implements Function<List, Set<String>> {
+    public static class LinkExtractorImpl implements LinksExtractor<List> {
         @Override
         public Set<String> apply(List nodes) {
             final Set<String> output = new LinkedHashSet<>();
@@ -158,15 +158,6 @@ public class ReadMeDOMCrawlerTest extends TestBase {
 //            }
             return this.parserCallback.getNodeList();
         }
-
-        @Override
-        public List<String> getCookieNameValueList() {
-            return Collections.EMPTY_LIST;
-        }
-        @Override
-        public Map<String, String> getCookieNameValueMap() {
-            return Collections.EMPTY_MAP;
-        }
     }
 
     public ReadMeDOMCrawlerTest() { }
@@ -176,7 +167,7 @@ public class ReadMeDOMCrawlerTest extends TestBase {
         
 //        new ReadMeDOMCrawlerTest().crawl("http://www.buzzwears.com");
 
-        final Predicate<String> guardianPreferredLink = (link) -> link.contains("/news/");
+        final PreferredLinkTest guardianPreferredLink = (link) -> link.contains("/news/");
         new ReadMeDOMCrawlerTest().crawl("https://guardian.ng/", guardianPreferredLink);
     }
 
@@ -184,11 +175,11 @@ public class ReadMeDOMCrawlerTest extends TestBase {
         this.crawl(startUrl, (link) -> false);
     }
     
-    public void crawl(String startUrl, Predicate<String> preferredLinkTest) {
+    public void crawl(String startUrl, PreferredLinkTest preferredLinkTest) {
         
         final ContentTypeRequest contentTypeReq = new ContentTypeRequestOkHttp();
     
-        final Predicate<String> crawlHtmlLinks = new HtmlLinkIsToBeCrawledTest(
+        final CrawlUrlTest crawlHtmlLinks = new HtmlLinkIsToBeCrawledTest(
                 contentTypeReq, 7_000, 7_000, true);
         
         final UrlParser<List<Node>> urlParser = new UrlParserImpl();

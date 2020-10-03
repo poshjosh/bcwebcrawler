@@ -22,7 +22,7 @@ import com.bc.webcrawler.ContentTypeRequest;
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 7, 2017 5:36:04 PM
  */
-public class HtmlLinkIsToBeCrawledTest implements Predicate<String> {
+public class HtmlLinkIsToBeCrawledTest implements CrawlUrlTest {
 
     private final Predicate<String> linkIsToBeCrawledTest;
     

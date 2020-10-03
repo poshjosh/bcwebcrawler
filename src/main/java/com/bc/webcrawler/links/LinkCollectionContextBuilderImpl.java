@@ -1,5 +1,6 @@
 package com.bc.webcrawler.links;
 
+import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.Buffer;
 import com.bc.webcrawler.BufferInMemoryStore;
 import com.bc.webcrawler.ContentTypeRequest;
@@ -8,9 +9,6 @@ import com.bc.webcrawler.CrawlerContext;
 import com.bc.webcrawler.ResumeHandler;
 import com.bc.webcrawler.ResumeHandlerInMemoryStore;
 import com.bc.webcrawler.predicates.HtmlLinkIsToBeCrawledTest;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * @author USER
@@ -31,9 +29,9 @@ public class LinkCollectionContextBuilderImpl<E>
     
     private long crawlLimit = Long.MAX_VALUE;
     
-    private Predicate<String> crawlUrlTest;
+    private CrawlUrlTest crawlUrlTest;
 
-    private Function<E, Set<String>> linksExtractor;
+    private LinksExtractor<E> linksExtractor;
 
     private Buffer<String> attemptedLinkBuffer;
     
@@ -93,23 +91,23 @@ public class LinkCollectionContextBuilderImpl<E>
     }
 
     @Override
-    public Predicate<String> getCrawlUrlTest() {
+    public CrawlUrlTest getCrawlUrlTest() {
         return crawlUrlTest;
     }
 
     @Override
-    public LinkCollectionContextBuilder<E> crawlUrlTest(Predicate<String> urlTest) {
+    public LinkCollectionContextBuilder<E> crawlUrlTest(CrawlUrlTest urlTest) {
         this.crawlUrlTest = urlTest;
         return this;
     }
 
     @Override
-    public Function<E, Set<String>> getLinksExtractor() {
+    public LinksExtractor<E> getLinksExtractor() {
         return linksExtractor;
     }
 
     @Override
-    public LinkCollectionContextBuilder<E> linksExtractor(Function<E, Set<String>> linksExtractor) {
+    public LinkCollectionContextBuilder<E> linksExtractor(LinksExtractor<E> linksExtractor) {
         this.linksExtractor = linksExtractor;
         return this;
     }

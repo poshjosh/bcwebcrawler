@@ -16,7 +16,6 @@
 
 package com.bc.webcrawler.links.deprecated;
 
-import com.bc.webcrawler.links.LinkQueueImpl;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.bc.webcrawler.links;
+package com.bc.webcrawler.links.deprecated;
 
 import java.util.Arrays;
 import java.util.Collection;

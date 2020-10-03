@@ -53,6 +53,8 @@ import com.bc.webcrawler.CrawlerImpl;
 import com.bc.webcrawler.links.LinkCollectionContext;
 import com.bc.webcrawler.links.LinkCollector;
 import com.bc.webcrawler.links.LinkCollectorAsync;
+import com.bc.webcrawler.links.LinksExtractor;
+import com.bc.webcrawler.predicates.PreferredLinkTest;
 import java.util.function.Consumer;
 
 /**
@@ -62,7 +64,7 @@ public class ReadMeJsoupCrawler {
 
     private static final Logger logger = Logger.getLogger(ReadMeJsoupCrawler.class.getName());
 
-    public static class JsoupLinkExtractor implements Function<Document, Set<String>> {
+    public static class JsoupLinkExtractor implements LinksExtractor<Document> {
         @Override
         public Set<String> apply(Document doc) {
             final Elements elements = doc.select("a[href]");
@@ -98,7 +100,6 @@ public class ReadMeJsoupCrawler {
             this.cookies = new HashMap<>();
         }
 
-
         @Override
         public Document parse(String link) throws MalformedURLException, IOException {
 
@@ -128,14 +129,12 @@ public class ReadMeJsoupCrawler {
             return doc;
         }
         
-        @Override
         public List<String> getCookieNameValueList() {
             final List<String> result = new ArrayList<>(cookies.size());
             cookies.forEach((k, v) -> result.add(k + '=' + v));
             return result;
         }
 
-        @Override
         public Map<String, String> getCookieNameValueMap() {
             return new LinkedHashMap(cookies);
         }
@@ -155,15 +154,14 @@ public class ReadMeJsoupCrawler {
         
 //https://www.jumia.com.ng/andrea-hair-growth-essence-beard-oil-growth-22599590.html
 
-        final String baseUrl = "https://www.jumia.com.ng/"; //http://www.buzzwears.com";
+        String baseUrl = "https://www.jumia.com.ng/"; //http://www.buzzwears.com";
+        baseUrl = "https://www.jumia.com.ng/umidigi-a7-pro-6.3-inch-4gb128gb-rom-android-10.016mp16mp5mp5mp16mp-4150mah-global-version-dual-4g-smartphone-61981276.html";
         final String startUrl = baseUrl;
 //        final Pattern linkToScrappPattern = Pattern.compile(".*");
         final Pattern linkToScrappPattern = Pattern.compile("\\d{1,}\\.html");//Pattern.compile("\\d{1,}_");
-        final Predicate<String> linkToScrappTest = (link) -> linkToScrappPattern.matcher(link).find();
+        final PreferredLinkTest linkToScrappTest = (link) -> linkToScrappPattern.matcher(link).find();
         
-        final ResumeHandler resumeHandler = new ResumeHandlerInMemoryStore(
-                Collections.EMPTY_SET
-        );
+        final ResumeHandler resumeHandler = new ResumeHandlerInMemoryStore();
         
         final String robotsCss = "meta[name=robots]";
         final Predicate<Document> docIsNoIndex = (doc) -> {
@@ -179,7 +177,7 @@ public class ReadMeJsoupCrawler {
         
         final int n = 1;
         
-        final int crawlLimit = 100 * n;
+        final int crawlLimit = 1;//100 * n;
         
         final LinkCollectionContext<Document> linkCtx = LinkCollectionContext.builder(Document.class)
                 .contentTypeRequest(new ContentTypeRequestOkHttp())
@@ -209,13 +207,13 @@ public class ReadMeJsoupCrawler {
                 .linkCollectionContext(linkCtx)
                 .baseUrl(baseUrl)
                 .batchInterval(3_000)
-                .batchSize(2)
+                .batchSize(1)//2)
                 .contentTypeRequest(new ContentTypeRequestOkHttp())
                 .linkCollector(linkCollector)
                 .maxFailsAllowed(9 * n)
                 .pageIsNoIndexTest(docIsNoIndex)
                 .pageIsNoFollowTest(docIsNoFollow)
-                .parseLimit(10 * n)
+                .parseLimit(1)//10 * n)
                 .parseUrlTest((link) -> true)
                 .preferredLinkTest(linkToScrappTest)
 //                .retryOnExceptionTestSupplier(() -> new RetryConnectionFilter(2, 2_000)) 
@@ -230,7 +228,7 @@ public class ReadMeJsoupCrawler {
             @Override
             public String waitAndRemoveFirstLink(String resultIfNone) {
 
-                final String link = (String)getLinkQueue().poll(null);
+                final String link = (String)getLinkQueue().poll();
 
                 final String result = link == null ? resultIfNone : link;
 
@@ -284,6 +282,12 @@ public class ReadMeJsoupCrawler {
                     price = elem.attr("data-price");
                     
                     System.out.println("Product. ID: " + id + ", price: " + price);
+                    
+                    Elements elems = doc.getElementsByTag("img"); 
+                    
+                    System.out.println("Printing image nodes");
+                    elems.stream().map((e) -> e.outerHtml()).forEachOrdered(System.out::println);
+                            
                 }
             }
         }finally{

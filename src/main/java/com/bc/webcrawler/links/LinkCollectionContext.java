@@ -1,11 +1,9 @@
 package com.bc.webcrawler.links;
 
+import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.Buffer;
 import com.bc.webcrawler.ContentTypeRequest;
 import com.bc.webcrawler.ResumeHandler;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * @author USER
@@ -29,13 +27,13 @@ public interface LinkCollectionContext<E> {
     
     ResumeHandler getResumeHandler();
 
-    default Predicate<String> getCrawlUrlTest() {
+    default CrawlUrlTest getCrawlUrlTest() {
         return (link) -> true;
     }
     
     ContentTypeRequest getContentTypeRequest();
 
-    Function<E, Set<String>> getLinksExtractor();
+    LinksExtractor<E> getLinksExtractor();
 
     Buffer<String> getAttemptedLinkBuffer();
 }

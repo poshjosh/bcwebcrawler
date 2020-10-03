@@ -22,12 +22,12 @@ import com.bc.webcrawler.links.LinkCollectionContext;
 import com.bc.webcrawler.links.LinkCollector;
 import com.bc.webcrawler.links.LinkCollectorAsync;
 import com.bc.webcrawler.links.LinkCollectorImpl;
+import com.bc.webcrawler.links.LinksExtractor;
+import com.bc.webcrawler.predicates.CrawlUrlTest;
+import com.bc.webcrawler.predicates.ParseUrlTest;
+import com.bc.webcrawler.predicates.PreferredLinkTest;
 import java.util.Objects;
-import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 4, 2017 8:05:54 PM
@@ -47,16 +47,16 @@ public class CrawlerContextBuilderImpl<E> extends LinkCollectionContextBuilderIm
     private long timeoutMillis = Long.MAX_VALUE;
     private String baseUrl;
     
-    private Predicate<String> parseUrlTest = (link) -> true;
-    private UnaryOperator<String> urlFormatter = (link) -> link;
-    private Supplier<Predicate<Throwable>> retryOnExceptionTestSupplier;
+    private ParseUrlTest parseUrlTest = (link) -> true;
+    private UrlFormatter urlFormatter = (link) -> link;
+    private RetryOnExceptionTestSupplier retryOnExceptionTestSupplier;
     private Predicate<E> pageIsNoIndexTest = (doc) -> false;
     private Predicate<E> pageIsNoFollowTest = (doc) -> false;
     private LinkCollector<E> linkCollector;
     private ContentTypeRequest contentTypeRequest;
     private UrlParser<E> urlParser;
     
-    private Predicate<String> preferredLinkTest = (link) -> false;
+    private PreferredLinkTest preferredLinkTest = (link) -> false;
     
     public CrawlerContextBuilderImpl() { 
         this.retryOnExceptionTestSupplier = () -> new RetryConnectionFilter(2, 2_000);
@@ -134,23 +134,23 @@ public class CrawlerContextBuilderImpl<E> extends LinkCollectionContextBuilderIm
     }
 
     @Override
-    public Predicate<String> getPreferredLinkTest() {
+    public PreferredLinkTest getPreferredLinkTest() {
         return preferredLinkTest;
     }
 
     @Override
-    public CrawlerContextBuilder<E> preferredLinkTest(Predicate<String> preferredLinkTest) {
+    public CrawlerContextBuilder<E> preferredLinkTest(PreferredLinkTest preferredLinkTest) {
         this.preferredLinkTest = preferredLinkTest;
         return this;
     }
     
     @Override
-    public Predicate<String> getParseUrlTest() {
+    public ParseUrlTest getParseUrlTest() {
         return parseUrlTest;
     }
 
     @Override
-    public CrawlerContextBuilder<E> parseUrlTest(Predicate<String> urlTest) {
+    public CrawlerContextBuilder<E> parseUrlTest(ParseUrlTest urlTest) {
         this.parseUrlTest = urlTest;
         return this;
     }
@@ -244,23 +244,23 @@ public class CrawlerContextBuilderImpl<E> extends LinkCollectionContextBuilderIm
     }
 
     @Override
-    public UnaryOperator<String> getUrlFormatter() {
+    public UrlFormatter getUrlFormatter() {
         return urlFormatter;
     }
 
     @Override
-    public CrawlerContextBuilder<E> urlFormatter(UnaryOperator<String> urlFormatter) {
+    public CrawlerContextBuilder<E> urlFormatter(UrlFormatter urlFormatter) {
         this.urlFormatter = urlFormatter;
         return this;
     }
 
     @Override
-    public Supplier<Predicate<Throwable>> getRetryOnExceptionTestSupplier() {
+    public RetryOnExceptionTestSupplier getRetryOnExceptionTestSupplier() {
         return retryOnExceptionTestSupplier;
     }
 
     @Override
-    public CrawlerContextBuilder<E> retryOnExceptionTestSupplier(Supplier<Predicate<Throwable>> retryOnExceptionTestSupplier) {
+    public CrawlerContextBuilder<E> retryOnExceptionTestSupplier(RetryOnExceptionTestSupplier retryOnExceptionTestSupplier) {
         this.retryOnExceptionTestSupplier = retryOnExceptionTestSupplier;
         return this;
     }
@@ -284,13 +284,13 @@ public class CrawlerContextBuilderImpl<E> extends LinkCollectionContextBuilderIm
     }
 
     @Override
-    public CrawlerContextBuilder<E> linksExtractor(Function<E, Set<String>> linksExtractor) {
-        super.linksExtractor(linksExtractor); 
+    public CrawlerContextBuilder<E> linksExtractor(LinksExtractor linksExtractor) {
+        super.linksExtractor(linksExtractor);
         return this;
     }
 
     @Override
-    public CrawlerContextBuilder<E> crawlUrlTest(Predicate<String> urlTest) {
+    public CrawlerContextBuilder<E> crawlUrlTest(CrawlUrlTest urlTest) {
         super.crawlUrlTest(urlTest); 
         return this;
     }

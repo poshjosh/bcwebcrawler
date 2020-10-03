@@ -15,9 +15,7 @@
  */
 package com.bc.webcrawler;
 
-import com.bc.webcrawler.links.LinkQueueImpl;
 import com.bc.webcrawler.links.LinkCollector;
-import com.bc.webcrawler.links.LinkQueue;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
@@ -29,10 +27,10 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.text.MessageFormat;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -49,7 +47,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     private final Set<String> failed;
 
-    private final LinkQueue<String> linkQueue;
+    private final BlockingQueue<String> linkQueue;
 
     private final Set<String> robotsExcludedLinks;
     
@@ -77,10 +75,11 @@ public class CrawlerImpl<E> implements Serializable,
         
         final int crawlLimit = (int)this.context.getCrawlLimit();
         
-        this.linkQueue = new LinkQueueImpl(
-                context.getPreferredLinkTest(),
-                new LinkedBlockingQueue(new LinkedHashSet(seedUrls)), 
-                new LinkedBlockingQueue(crawlLimit <= 0 ? 1 : crawlLimit));
+        final int initialCapacity = Math.max(seedUrls.size(), crawlLimit);
+        this.linkQueue = new PriorityBlockingQueue(
+                (initialCapacity <= 0 ? 1 : initialCapacity), new ComparatorForPredicate(context.getPreferredLinkTest()));
+        
+        this.linkQueue.addAll(seedUrls);
         
         LOG.fine(() -> "URL queue capacity: " + crawlLimit +
                 ", " + seedUrls.size() + " seed URLs");
@@ -166,7 +165,7 @@ public class CrawlerImpl<E> implements Serializable,
             
                 LOG.log(Level.FINE, "Rejected by ParseURLTest, URL: ", next);
 
-                linkQueue.poll(null);
+                linkQueue.poll();
             }
         }
 
@@ -362,21 +361,27 @@ public class CrawlerImpl<E> implements Serializable,
     public String waitAndRemoveFirstLink(String resultIfNone) {
 
         final long timeoutMillis = this.getPollTimeout();
+        LOG.fine(() -> "Poll timeout: " + timeoutMillis);
         
         final long tb4 = System.currentTimeMillis();
         final String link;
         if(timeoutMillis <= 0L) {
-            link = linkQueue.isEmpty() ? resultIfNone : linkQueue.poll(resultIfNone);
-        }else if(!linkQueue.isEmpty()) {
-            link = linkQueue.poll(resultIfNone);
+            link = linkQueue.isEmpty() ? resultIfNone : linkQueue.poll();
+        }else if( ! linkQueue.isEmpty()) {
+            link = linkQueue.poll();
         }else{
 
             LOG.finer(() -> "Queue size: " + linkQueue.size() + 
                     ", will wait at most " + timeoutMillis + " millis for next link.");
 
-            link = linkQueue.poll(timeoutMillis, TimeUnit.MILLISECONDS, resultIfNone);
+            try{
+                link = linkQueue.poll(timeoutMillis, TimeUnit.MILLISECONDS);
+            }catch(InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
 
-            LOG.finer(() -> "Queue size: " + linkQueue.size() + ", waited " + 
+            LOG.fine(() -> "Queue size: " + linkQueue.size() + ", waited " + 
                     (System.currentTimeMillis() - tb4) + " millis for link: " + link);
         }
         
@@ -438,7 +443,7 @@ public class CrawlerImpl<E> implements Serializable,
         return currentLink;
     }
 
-    public LinkQueue<String> getLinkQueue() {
+    public BlockingQueue<String> getLinkQueue() {
         return linkQueue;
     }
 

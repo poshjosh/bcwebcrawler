@@ -53,7 +53,7 @@ public class OkHttpUrlParser implements UrlParser<Document>, CookieJar {
     public OkHttpUrlParser(Function<String, String> userAgentProvider, 
             int connectTimeout, int readTimeout) {
         this.client = new OkHttpClient.Builder()
-                .connectTimeout(readTimeout, TimeUnit.MILLISECONDS)
+                .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
                 .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
                 .retryOnConnectionFailure(true)
                 .cookieJar(this)
@@ -99,12 +99,10 @@ public class OkHttpUrlParser implements UrlParser<Document>, CookieJar {
         return this.cookies.stream().map((setCookieHeaderValue) -> Cookie.parse(url, setCookieHeaderValue)).collect(Collectors.toList());
     }
 
-    @Override
     public List<String> getCookieNameValueList() {
         return Collections.unmodifiableList(new ArrayList(this.cookies));
     }
 
-    @Override
     public Map<String, String> getCookieNameValueMap() {
         if(cookies.isEmpty()) {
             return Collections.EMPTY_MAP;

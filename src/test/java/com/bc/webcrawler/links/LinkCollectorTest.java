@@ -9,12 +9,12 @@ import com.bc.webcrawler.CrawlerContext;
 import com.bc.webcrawler.ReadMeDOMCrawlerTest;
 import com.bc.webcrawler.ResumeHandlerInMemoryStore;
 import com.bc.webcrawler.UrlParser;
+import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.predicates.HtmlLinkIsToBeCrawledTest;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -200,7 +200,7 @@ public class LinkCollectorTest {
         
         final ContentTypeRequest contentTypeReq = new ContentTypeRequestOkHttp();
     
-        final Predicate<String> crawlHtmlLinks = new HtmlLinkIsToBeCrawledTest(
+        final CrawlUrlTest crawlHtmlLinks = new HtmlLinkIsToBeCrawledTest(
                 contentTypeReq, 7_000, 7_000, true);
         
         final CrawlerContext<List> crawlerContext = CrawlerContext.builder(List.class)
@@ -244,16 +244,6 @@ public class LinkCollectorTest {
                 attemptedUrls.add(url);
                 return url;
             }
-        }
-
-        @Override
-        public List getCookieNameValueList() {
-            return Collections.EMPTY_LIST;
-        }
-
-        @Override
-        public Map getCookieNameValueMap() {
-            return Collections.EMPTY_MAP;
         }
     }
 }
