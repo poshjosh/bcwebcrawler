@@ -469,7 +469,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public int getAttempted() {
-        return this.attempted.size();
+        return this.attempted.isDeleted() ? -1 : this.attempted.size();
     }
 
     @Override

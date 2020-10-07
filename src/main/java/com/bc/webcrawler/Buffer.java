@@ -13,8 +13,6 @@ public interface Buffer<E> extends Iterable<E>{
     
     /**
      * <p>Confirms if this buffer's content has been deleted</p>
-     * Once this method is called. All subsequent operations must throw
-     * {@link java.lang.IllegalStateException}
      * @return <tt>true</tt> if {@link #delete()} has been called, otherwise returns <tt>false</tt>
      *
      * @see #isDeleted() 
