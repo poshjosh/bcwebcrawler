@@ -39,6 +39,8 @@ public interface CrawlSnapshot {
     List<String> getRemainingLinks();
     
     long getTimeSpentMillis();
+    
+    boolean isWithinTimeLimit();
 
     boolean isWithinCrawlLimit();
 

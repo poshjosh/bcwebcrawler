@@ -70,6 +70,11 @@ public class CrawlerVersion2<E> implements Serializable, Crawler<E>, CrawlSnapsh
         LOG.fine(() -> "Done creating: " + this);
     }
 
+    @Override
+    public boolean isWithinTimeLimit() {
+        return ! this.isTimedout();
+    }
+
     public boolean isShutdownAttempted() {
         return shutdownAttempted;
     }

@@ -316,6 +316,11 @@ public class CrawlerImpl<E> implements Serializable,
         return withinLimit;
     }
 
+    @Override
+    public boolean isWithinTimeLimit() {
+        return ! this.isTimedout();
+    }
+
     public E parse(String link, Predicate<Throwable> test) 
             throws MalformedURLException, IOException {
 
@@ -401,7 +406,7 @@ public class CrawlerImpl<E> implements Serializable,
     }
     
     public long getTimeLeftMillis(long outputIfNone) {
-        final long timeLeftMillis = context.getTimeoutMillis() - this.getTimeSpentMillis();
+        final long timeLeftMillis = this.context.getTimeoutMillis() - this.getTimeSpentMillis();
         return timeLeftMillis < 0 ? outputIfNone : timeLeftMillis;
     }
     
