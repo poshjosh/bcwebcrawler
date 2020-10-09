@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
@@ -59,19 +60,25 @@ public class CrawlerImpl<E> implements Serializable,
     
     private long startTime = -1L;
     
-    private boolean shutdownAttempted;
+    private boolean shutdownRequested;
     
     private String currentLink;
 
-    public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrls) {
+    public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrlsIfNone) {
 
         LOG.finer("Creating");
-        
+  
         this.context = Objects.requireNonNull(context);
         
-        if(seedUrls.isEmpty()) {
-            throw new IllegalArgumentException();
+        Collection<String> resumeUrls = this.context.getResumeHandler().load();
+        
+        LOG.fine(() -> "Seed urls: " + seedUrlsIfNone.size() + ", resume urls: " + resumeUrls.size());
+        
+        if(resumeUrls.isEmpty() && seedUrlsIfNone.isEmpty()) {
+            throw new IllegalArgumentException("Both resume URLs and seed URLs are empty");
         }
+        
+        Collection<String> seedUrls = resumeUrls.isEmpty() ? seedUrlsIfNone : resumeUrls;
         
         final int crawlLimit = (int)this.context.getCrawlLimit();
         
@@ -81,8 +88,8 @@ public class CrawlerImpl<E> implements Serializable,
         
         this.linkQueue.addAll(seedUrls);
         
-        LOG.fine(() -> "URL queue capacity: " + crawlLimit +
-                ", " + seedUrls.size() + " seed URLs");
+        LOG.fine(() -> "URL queue initial capacity: " + initialCapacity +
+                ", Number of seed urls: " + seedUrls.size() + ", Crawl limit: " + crawlLimit);
         
         this.attempted = Objects.requireNonNull(context.getAttemptedLinkBuffer());
 
@@ -96,9 +103,25 @@ public class CrawlerImpl<E> implements Serializable,
         
         LOG.fine(() -> "Done creating: " + this);
     }
+    
+    @Override
+    public boolean isRunning() {
+        return this.isStarted() && ! this.isShutdownRequested() && this.isWithinLimit();
+    }
+    
+    private boolean isWithinLimit() {
+        return this.isWithinCrawlLimit() && this.isWithinFailLimit() && 
+                this.isWithinParseLimit() && this.isWithinTimeLimit();    
+    }
+    
+    @Override
+    public boolean isStarted() {
+        return this.startTime > -1;
+    }
 
-    public boolean isShutdownAttempted() {
-        return shutdownAttempted;
+    @Override
+    public boolean isShutdownRequested() {
+        return shutdownRequested;
     }
 
     @Override
@@ -109,15 +132,17 @@ public class CrawlerImpl<E> implements Serializable,
     @Override
     public void shutdown(long timeout, TimeUnit timeUnit) {
         
-        if(this.isShutdownAttempted()) {
+        if(this.isShutdownRequested()) {
             return;
         }
         
-        this.shutdownAttempted = true;
+        this.shutdownRequested = true;
         
         LOG.log(Level.FINE, "SHUTTING DOWN {0}", this);
         
         this.linkCollector.shutdown(timeout, timeUnit);
+        
+        this.context.getResumeHandler().save(this.linkQueue);
         
         this.context.getAttemptedLinkBuffer().delete();
     }
@@ -138,10 +163,6 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public boolean hasNext() {
-
-        if(this.startTime < 0) {
-            this.startTime = System.currentTimeMillis();
-        }
         
         boolean hasNext = false;
         
@@ -358,7 +379,7 @@ public class CrawlerImpl<E> implements Serializable,
     }
 
     public boolean mayProceed() {
-        final boolean mayProceed = !this.isTimedout() && this.isWithinFailLimit();
+        final boolean mayProceed = ! this.isShutdownRequested() && !this.isTimedout() && this.isWithinFailLimit();
         LOG.finer(() -> "May proceed: " + mayProceed);
         return mayProceed;
     }
@@ -366,7 +387,7 @@ public class CrawlerImpl<E> implements Serializable,
     public String waitAndRemoveFirstLink(String resultIfNone) {
 
         final long timeoutMillis = this.getPollTimeout();
-        LOG.fine(() -> "Poll timeout: " + timeoutMillis);
+        LOG.finer(() -> "Poll timeout: " + timeoutMillis);
         
         final long tb4 = System.currentTimeMillis();
         final String link;

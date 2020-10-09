@@ -16,6 +16,7 @@
 
 package com.bc.webcrawler;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -44,5 +45,15 @@ public class ResumeHandlerInMemoryStore implements ResumeHandler {
     @Override
     public boolean saveIfNotExists(String name) {
         return store.add(name);
+    }
+
+    @Override
+    public void save(Collection<String> names) {
+        store.addAll(names);
+    }
+
+    @Override
+    public Collection<String> load() {
+        return Collections.unmodifiableSet(store);
     }
 }

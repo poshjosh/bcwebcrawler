@@ -22,8 +22,6 @@ import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -32,7 +30,13 @@ import java.util.stream.StreamSupport;
  */
 public interface Crawler<E> extends Iterator<E> {
     
-    Logger CRAWLER_LOGGER = Logger.getLogger(Crawler.class.getName());
+//    Logger CRAWLER_LOGGER = Logger.getLogger(Crawler.class.getName());
+    
+    boolean isStarted();
+    
+    boolean isRunning();
+    
+    boolean isShutdownRequested();
     
     boolean isShutdown();
     
