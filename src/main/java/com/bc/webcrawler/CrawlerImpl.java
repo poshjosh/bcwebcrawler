@@ -240,7 +240,7 @@ public class CrawlerImpl<E> implements Serializable,
                 
                 Store<String> linkStore = this.context.getLinkStore();
                 if( ! linkStore.contains(url)) {
-                    linkStore.save(url);
+                    linkStore.saveAndFlush(url);
                 }
                 
             }catch(IOException e) {

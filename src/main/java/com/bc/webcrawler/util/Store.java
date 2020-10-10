@@ -8,6 +8,12 @@ import java.util.stream.StreamSupport;
  */
 public interface Store<E> {
     
+    default E saveAndFlush(E elem) {
+        E saved = save(elem);
+        flush();
+        return saved;
+    }
+    
     default boolean isEmpty() {
         return count() < 1;
     }
