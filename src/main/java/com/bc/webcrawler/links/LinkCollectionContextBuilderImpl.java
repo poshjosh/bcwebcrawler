@@ -1,14 +1,14 @@
 package com.bc.webcrawler.links;
 
 import com.bc.webcrawler.predicates.CrawlUrlTest;
-import com.bc.webcrawler.Buffer;
-import com.bc.webcrawler.BufferInMemoryStore;
+import com.bc.webcrawler.util.Buffer;
+import com.bc.webcrawler.util.BufferInMemoryStore;
 import com.bc.webcrawler.ContentTypeRequest;
 import com.bc.webcrawler.ContentTypeRequestImpl;
 import com.bc.webcrawler.CrawlerContext;
-import com.bc.webcrawler.ResumeHandler;
-import com.bc.webcrawler.ResumeHandlerInMemoryStore;
+import com.bc.webcrawler.util.InMemoryStore;
 import com.bc.webcrawler.predicates.HtmlLinkIsToBeCrawledTest;
+import com.bc.webcrawler.util.Store;
 
 /**
  * @author USER
@@ -35,7 +35,7 @@ public class LinkCollectionContextBuilderImpl<E>
 
     private Buffer<String> attemptedLinkBuffer;
     
-    private ResumeHandler resumeHandler; 
+    private Store<String> linkStore; 
     
     private ContentTypeRequest contentTypeRequest;
     
@@ -48,8 +48,8 @@ public class LinkCollectionContextBuilderImpl<E>
         
         this.buildAttempted = true;
 
-        if(this.resumeHandler == null) {
-            this.resumeHandler = new ResumeHandlerInMemoryStore();
+        if(this.linkStore == null) {
+            this.linkStore = new InMemoryStore();
         }
         
         if(this.attemptedLinkBuffer == null){
@@ -124,13 +124,13 @@ public class LinkCollectionContextBuilderImpl<E>
     }
 
     @Override
-    public ResumeHandler getResumeHandler() {
-        return resumeHandler;
+    public Store<String> getLinkStore() {
+        return linkStore;
     }
 
     @Override
-    public LinkCollectionContextBuilder<E> resumeHandler(ResumeHandler resumeHandler) {
-        this.resumeHandler = resumeHandler;
+    public LinkCollectionContextBuilder<E> linkStore(Store<String> store) {
+        this.linkStore = store;
         return this;
     }
 

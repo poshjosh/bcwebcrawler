@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.bc.webcrawler;
+package com.bc.webcrawler.util;
 
-import java.util.Collection;
+import com.bc.webcrawler.util.Store;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -24,36 +25,48 @@ import java.util.Set;
 /**
  * @author Chinomso Bassey Ikwuagwu on Oct 5, 2017 11:10:12 AM
  */
-public class ResumeHandlerInMemoryStore implements ResumeHandler {
+public class InMemoryStore<E> implements Store<E> {
 
-    private final Set<String> store;
+    private final Set<E> store;
 
-    public ResumeHandlerInMemoryStore() {
+    public InMemoryStore() {
         this(Collections.EMPTY_SET);
     }
     
-    public ResumeHandlerInMemoryStore(Set<String> pendingUrls) {
-        this.store = new HashSet();
-        this.store.addAll(pendingUrls);
+    public InMemoryStore(Set<E> set) {
+        this.store = Collections.synchronizedSet(new HashSet());
+        this.store.addAll(set);
     }
 
     @Override
-    public boolean isExisting(String name) {
+    public boolean contains(E name) {
         return store.contains(name);
     }
 
     @Override
-    public boolean saveIfNotExists(String name) {
-        return store.add(name);
+    public Iterable<E> getAll(int offset, int limit) {
+        int end = offset + limit;
+        end = Math.min(store.size(), end);
+        return new ArrayList(store).subList(offset, end);
     }
 
     @Override
-    public void save(Collection<String> names) {
-        store.addAll(names);
+    public void flush() { }
+
+    @Override
+    public E save(E elem) {
+        store.add(elem);
+        return elem;
     }
 
     @Override
-    public Collection<String> load() {
-        return Collections.unmodifiableSet(store);
+    public E delete(E elem) {
+        store.remove(elem);
+        return elem;
+    }
+
+    @Override
+    public long count() {
+        return store.size();
     }
 }

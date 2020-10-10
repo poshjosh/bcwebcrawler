@@ -20,8 +20,7 @@ import com.bc.util.Util;
 import com.bc.webcrawler.ContentTypeRequestOkHttp;
 import com.bc.webcrawler.Crawler;
 import com.bc.webcrawler.CrawlerContext;
-import com.bc.webcrawler.ResumeHandler;
-import com.bc.webcrawler.ResumeHandlerInMemoryStore;
+import com.bc.webcrawler.util.InMemoryStore;
 import com.bc.webcrawler.UrlParser;
 import com.bc.webcrawler.UserAgentProvider;
 import java.io.IOException;
@@ -161,8 +160,6 @@ public class ReadMeJsoupCrawler {
         final Pattern linkToScrappPattern = Pattern.compile("\\d{1,}\\.html");//Pattern.compile("\\d{1,}_");
         final PreferredLinkTest linkToScrappTest = (link) -> linkToScrappPattern.matcher(link).find();
         
-        final ResumeHandler resumeHandler = new ResumeHandlerInMemoryStore();
-        
         final String robotsCss = "meta[name=robots]";
         final Predicate<Document> docIsNoIndex = (doc) -> {
             final Element robots = doc.select(robotsCss).first();
@@ -184,7 +181,7 @@ public class ReadMeJsoupCrawler {
                 .crawlLimit(crawlLimit)
                 .crawlUrlTest((link) -> true)
                 .linksExtractor(new JsoupLinkExtractor())
-                .resumeHandler(resumeHandler)
+                .linkStore(new InMemoryStore())
                 .build();
         
 //        final LinkCollector<Document> linkCollector = linkCtx.newLinkCollector(baseUrl, true);

@@ -1,4 +1,4 @@
-package com.bc.webcrawler;
+package com.bc.webcrawler.util;
 
 /**
  * @author USER

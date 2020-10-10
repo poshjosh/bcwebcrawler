@@ -7,7 +7,7 @@ import com.bc.webcrawler.ContentTypeRequestOkHttp;
 import com.bc.webcrawler.Crawler;
 import com.bc.webcrawler.CrawlerContext;
 import com.bc.webcrawler.ReadMeDOMCrawlerTest;
-import com.bc.webcrawler.ResumeHandlerInMemoryStore;
+import com.bc.webcrawler.util.InMemoryStore;
 import com.bc.webcrawler.UrlParser;
 import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.predicates.HtmlLinkIsToBeCrawledTest;
@@ -217,7 +217,7 @@ public class LinkCollectorTest {
                 .parseLimit(10)
                 .parseUrlTest((url) -> true)
 //                .preferredLinkTest(preferredLinkTest)
-                .resumeHandler(new ResumeHandlerInMemoryStore(Collections.EMPTY_SET))
+                .linkStore(new InMemoryStore())
                 .retryOnExceptionTestSupplier(() -> new RetryConnectionFilter(2, 2_000L))
                 .timeoutMillis(20_000)
                 .urlFormatter((url) -> url)

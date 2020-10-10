@@ -1,9 +1,9 @@
 package com.bc.webcrawler.links;
 
 import com.bc.webcrawler.predicates.CrawlUrlTest;
-import com.bc.webcrawler.Buffer;
+import com.bc.webcrawler.util.Buffer;
 import com.bc.webcrawler.ContentTypeRequest;
-import com.bc.webcrawler.ResumeHandler;
+import com.bc.webcrawler.util.Store;
 
 /**
  * @author USER
@@ -20,7 +20,7 @@ public interface LinkCollectionContextBuilder<E> {
 
     LinkCollectionContextBuilder<E> linksExtractor(LinksExtractor<E> linksExtractor);
 
-    LinkCollectionContextBuilder<E> resumeHandler(ResumeHandler resumeHandler);
+    LinkCollectionContextBuilder<E> linkStore(Store<String> linkStore);
     
     LinkCollectionContextBuilder<E> crawlUrlTest(CrawlUrlTest urlTest);
 

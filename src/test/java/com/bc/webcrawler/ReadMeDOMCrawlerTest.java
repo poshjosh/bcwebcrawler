@@ -1,5 +1,6 @@
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.util.InMemoryStore;
 import com.bc.net.RetryConnectionFilter;
 import com.bc.net.util.UserAgents;
 import com.bc.util.Util;
@@ -198,7 +199,7 @@ public class ReadMeDOMCrawlerTest extends TestBase {
                 .parseLimit(10)
                 .parseUrlTest((url) -> true)
                 .preferredLinkTest(preferredLinkTest)
-                .resumeHandler(new ResumeHandlerInMemoryStore(Collections.EMPTY_SET))
+                .linkStore(new InMemoryStore())
                 .retryOnExceptionTestSupplier(() -> new RetryConnectionFilter(2, 2_000L))
                 .timeoutMillis(20_000)
                 .urlFormatter((url) -> url)

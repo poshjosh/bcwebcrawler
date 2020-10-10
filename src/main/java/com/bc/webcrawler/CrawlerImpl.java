@@ -15,6 +15,8 @@
  */
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.util.Queue;
+import com.bc.webcrawler.util.Buffer;
 import com.bc.webcrawler.links.LinkCollector;
 import java.io.Serializable;
 import java.util.Collections;
@@ -23,19 +25,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import com.bc.util.Util;
+import com.bc.webcrawler.util.QueueImpl;
+import com.bc.webcrawler.util.Store;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class CrawlerImpl<E> implements Serializable, 
         Crawler<E>, CrawlSnapshot {
@@ -48,7 +49,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     private final Set<String> failed;
 
-    private final BlockingQueue<String> linkQueue;
+    private final Queue<String> linkQueue;
 
     private final Set<String> robotsExcludedLinks;
     
@@ -65,35 +66,23 @@ public class CrawlerImpl<E> implements Serializable,
     private String currentLink;
 
     public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrlsIfNone) {
+        this(context, new QueueImpl(context.createQueue(seedUrlsIfNone)));
+    }
+    
+    public CrawlerImpl(CrawlerContext<E> context, Queue<String> linkQueue) {
 
         LOG.finer("Creating");
   
         this.context = Objects.requireNonNull(context);
         
-        Collection<String> resumeUrls = this.context.getResumeHandler().load();
-        
-        LOG.fine(() -> "Seed urls: " + seedUrlsIfNone.size() + ", resume urls: " + resumeUrls.size());
-        
-        if(resumeUrls.isEmpty() && seedUrlsIfNone.isEmpty()) {
-            throw new IllegalArgumentException("Both resume URLs and seed URLs are empty");
-        }
-        
-        Collection<String> seedUrls = resumeUrls.isEmpty() ? seedUrlsIfNone : resumeUrls;
-        
-        final int crawlLimit = (int)this.context.getCrawlLimit();
-        
-        final int initialCapacity = Math.max(seedUrls.size(), crawlLimit);
-        this.linkQueue = new PriorityBlockingQueue(
-                (initialCapacity <= 0 ? 1 : initialCapacity), new ComparatorForPredicate(context.getPreferredLinkTest()));
-        
-        this.linkQueue.addAll(seedUrls);
-        
-        LOG.fine(() -> "URL queue initial capacity: " + initialCapacity +
-                ", Number of seed urls: " + seedUrls.size() + ", Crawl limit: " + crawlLimit);
+        this.linkQueue = Objects.requireNonNull(linkQueue);
         
         this.attempted = Objects.requireNonNull(context.getAttemptedLinkBuffer());
 
-        this.collectCrawledLink = (link) -> linkQueue.add(link);
+        this.collectCrawledLink = (link) -> {  
+            LOG.log(Level.INFO, "LINKS Adding link: {0}", link);
+            linkQueue.add(link);
+        };
 
         this.linkCollector = Objects.requireNonNull(context.getLinkCollector());
 
@@ -131,7 +120,7 @@ public class CrawlerImpl<E> implements Serializable,
     
     @Override
     public void shutdown(long timeout, TimeUnit timeUnit) {
-        
+
         if(this.isShutdownRequested()) {
             return;
         }
@@ -141,8 +130,6 @@ public class CrawlerImpl<E> implements Serializable,
         LOG.log(Level.FINE, "SHUTTING DOWN {0}", this);
         
         this.linkCollector.shutdown(timeout, timeUnit);
-        
-        this.context.getResumeHandler().save(this.linkQueue);
         
         this.context.getAttemptedLinkBuffer().delete();
     }
@@ -251,7 +238,10 @@ public class CrawlerImpl<E> implements Serializable,
 
                 doc = parse(url, this.context.getRetryOnExceptionTestSupplier().get());
                 
-                this.context.getResumeHandler().saveIfNotExists(url);
+                Store<String> linkStore = this.context.getLinkStore();
+                if( ! linkStore.contains(url)) {
+                    linkStore.save(url);
+                }
                 
             }catch(IOException e) {
 //                if(url.contains("&amp;")) {
@@ -469,7 +459,7 @@ public class CrawlerImpl<E> implements Serializable,
         return currentLink;
     }
 
-    public BlockingQueue<String> getLinkQueue() {
+    public Queue<String> getLinkQueue() {
         return linkQueue;
     }
 
@@ -500,7 +490,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public List<String> getRemainingLinks() {
-        return Arrays.asList(this.linkQueue.toArray(new String[0]));
+        return linkQueue.stream().collect(Collectors.toList());
     }
 
     @Override

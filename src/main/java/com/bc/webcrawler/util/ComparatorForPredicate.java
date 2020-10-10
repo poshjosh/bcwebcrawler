@@ -1,4 +1,4 @@
-package com.bc.webcrawler;
+package com.bc.webcrawler.util;
 
 import java.util.Comparator;
 import java.util.Objects;

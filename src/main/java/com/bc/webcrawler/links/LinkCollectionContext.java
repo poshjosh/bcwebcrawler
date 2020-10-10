@@ -1,9 +1,9 @@
 package com.bc.webcrawler.links;
 
 import com.bc.webcrawler.predicates.CrawlUrlTest;
-import com.bc.webcrawler.Buffer;
+import com.bc.webcrawler.util.Buffer;
 import com.bc.webcrawler.ContentTypeRequest;
-import com.bc.webcrawler.ResumeHandler;
+import com.bc.webcrawler.util.Store;
 
 /**
  * @author USER
@@ -25,7 +25,7 @@ public interface LinkCollectionContext<E> {
 
     long getCrawlLimit();
     
-    ResumeHandler getResumeHandler();
+    Store<String> getLinkStore();
 
     default CrawlUrlTest getCrawlUrlTest() {
         return (link) -> true;

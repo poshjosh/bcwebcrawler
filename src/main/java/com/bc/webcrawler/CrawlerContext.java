@@ -18,7 +18,11 @@ package com.bc.webcrawler;
 
 import com.bc.webcrawler.links.LinkCollectionContext;
 import com.bc.webcrawler.links.LinkCollector;
+import com.bc.webcrawler.util.ComparatorForPredicate;
+import java.util.Collection;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -34,6 +38,32 @@ public interface CrawlerContext<E> extends LinkCollectionContext<E>{
     
     default Crawler<E> newCrawler(Set<String> seedUrls) {
         return new CrawlerImpl(this, seedUrls);
+    }
+
+    
+    default BlockingQueue<String> createQueue(Collection<String> seedUrls) {
+    
+        final int crawlLimit = (int)getCrawlLimit();
+        final int max = Math.max(seedUrls.size(), crawlLimit);
+        final int initialCapacity = max <= 0 ? 1 : max;
+        
+        BlockingQueue<String> linkQueue = createQueue(initialCapacity);
+        
+        if( ! seedUrls.isEmpty()) {
+            
+            linkQueue.addAll(seedUrls);
+        }
+        
+        return linkQueue;
+    }
+
+    default BlockingQueue<String> createQueue(int initialCapacity) {
+    
+//        LOG.fine(() -> "Seed urls: " + seedUrls.size());
+        BlockingQueue<String> linkQueue = new PriorityBlockingQueue<>(
+                initialCapacity, new ComparatorForPredicate(getPreferredLinkTest()));
+        
+        return linkQueue;
     }
     
     long getBatchInterval();

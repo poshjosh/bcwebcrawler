@@ -16,6 +16,7 @@
 
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.util.Buffer;
 import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.links.LinkCollectionContext;
 import com.bc.webcrawler.links.LinkCollectionContextBuilder;
@@ -23,6 +24,7 @@ import com.bc.webcrawler.links.LinkCollector;
 import com.bc.webcrawler.links.LinksExtractor;
 import com.bc.webcrawler.predicates.ParseUrlTest;
 import com.bc.webcrawler.predicates.PreferredLinkTest;
+import com.bc.webcrawler.util.Store;
 import java.util.function.Predicate;
 
 /**
@@ -73,7 +75,7 @@ public interface CrawlerContextBuilder<E> extends LinkCollectionContextBuilder<E
     public CrawlerContextBuilder<E> crawlUrlTest(CrawlUrlTest urlTest);
 
     @Override
-    public CrawlerContextBuilder<E> resumeHandler(ResumeHandler resumeHandler);
+    public CrawlerContextBuilder<E> linkStore(Store<String> linkStore);
 
     @Override
     public CrawlerContextBuilder<E> linksExtractor(LinksExtractor linksExtractor);

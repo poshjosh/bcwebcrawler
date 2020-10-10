@@ -16,6 +16,7 @@
 
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.util.Buffer;
 import com.bc.webcrawler.links.LinkCollectionContextBuilderImpl;
 import com.bc.net.RetryConnectionFilter;
 import com.bc.webcrawler.links.LinkCollectionContext;
@@ -26,6 +27,7 @@ import com.bc.webcrawler.links.LinksExtractor;
 import com.bc.webcrawler.predicates.CrawlUrlTest;
 import com.bc.webcrawler.predicates.ParseUrlTest;
 import com.bc.webcrawler.predicates.PreferredLinkTest;
+import com.bc.webcrawler.util.Store;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -96,7 +98,7 @@ public class CrawlerContextBuilderImpl<E> extends LinkCollectionContextBuilderIm
         this.crawlUrlTest(c.getCrawlUrlTest());
         this.linksExtractor(c.getLinksExtractor());
         this.asyncLinkCollection(c.isAsyncLinkCollection());
-        this.resumeHandler(c.getResumeHandler());
+        this.linkStore(c.getLinkStore());
         return this;
     }
 
@@ -272,8 +274,8 @@ public class CrawlerContextBuilderImpl<E> extends LinkCollectionContextBuilderIm
     }
 
     @Override
-    public CrawlerContextBuilder<E> resumeHandler(ResumeHandler resumeHandler) {
-        super.resumeHandler(resumeHandler); 
+    public CrawlerContextBuilder<E> linkStore(Store<String> store) {
+        super.linkStore(store); 
         return this;
     }
 

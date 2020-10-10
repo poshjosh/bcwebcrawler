@@ -17,8 +17,7 @@
 package com.bc.webcrawler.links;
 
 import com.bc.util.UrlUtil;
-import com.bc.webcrawler.Buffer;
-import com.bc.webcrawler.ResumeHandler;
+import com.bc.webcrawler.util.Buffer;
 import com.bc.webcrawler.predicates.SameHostTest;
 import java.net.MalformedURLException;
 import java.text.MessageFormat;
@@ -29,6 +28,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.bc.webcrawler.util.Store;
 
 /**
  * @author Chinomso Bassey Ikwuagwu on Aug 11, 2018 3:01:44 AM
@@ -223,8 +223,8 @@ public class LinkCollectorImpl<E> implements LinkCollector<E> {
     public boolean isAttempted(String link) {
         final boolean alreadyAttempted = this.isLinkAttempted.test(link);
         LOG.log(alreadyAttempted?Level.FINER:Level.FINEST, "Already attempted: {0}", link);  
-        final ResumeHandler resumeHandler = context.getResumeHandler();
-        return alreadyAttempted || resumeHandler.isExisting(link); 
+        final Store<String> linkStore = context.getLinkStore();
+        return alreadyAttempted || linkStore.contains(link); 
     }
 
     @Override

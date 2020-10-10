@@ -1,5 +1,6 @@
 package com.bc.webcrawler;
 
+import com.bc.webcrawler.util.ComparatorForPredicate;
 import java.util.PriorityQueue;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
