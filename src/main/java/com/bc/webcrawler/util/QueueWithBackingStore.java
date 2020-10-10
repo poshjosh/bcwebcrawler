@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -52,7 +53,6 @@ public class QueueWithBackingStore implements com.bc.webcrawler.util.Queue<Strin
                 }
             }finally{
                 if(added) {
-                    LOG.info("LINKS Flushing store");
                     store.flush();
                 }
             }
@@ -66,28 +66,27 @@ public class QueueWithBackingStore implements com.bc.webcrawler.util.Queue<Strin
     }
 
     private boolean add(String elem, boolean flush) {
+        final boolean addToQueue = queue.size() < bufferSize;
+        LOG.finest(() -> "Adding to " + (addToQueue?"queue":"store") + ", link: " + elem);
         boolean ret;
-        if(queue.size() < bufferSize) {
+        if(addToQueue) {
             final boolean queueContains = queue.contains(elem);
-            LOG.info(() -> "LINKS About to add to queue. Queue contains url: " + 
-                    queueContains + ", URL: " + elem);
             if( ! queueContains) {
                 ret = queue.add(elem);
             }else{
+                LOG.finest(() -> "Queue already contains: " + elem);
                 ret = false;
             }
         }else{
             final boolean storeContains = store.contains(elem);
-            LOG.info(() -> "LINKS About to add to store. Store contains url: " + 
-                    storeContains + ", URL: " + elem);
             if( ! storeContains) {
                 store.save(elem);
                 ret = true;
                 if(flush) {
-                    LOG.info("LINKS Flushing store");
                     store.flush();
                 }
             }else{
+                LOG.finest(() -> "Store already contains: " + elem);
                 ret = false;
             }
         }
@@ -103,7 +102,8 @@ public class QueueWithBackingStore implements com.bc.webcrawler.util.Queue<Strin
     
     @Override
     public int size() {
-        return queue.size() + (int)store.count();
+        final long size = queue.size() + store.count();
+        return (int)size;
     }
     
     @Override
@@ -115,11 +115,14 @@ public class QueueWithBackingStore implements com.bc.webcrawler.util.Queue<Strin
     
     private void update() {
         final int toAdd = bufferSize - queue.size();
+//        LOG.finest(() -> "To add to queue: " + toAdd + ", buffer size: " + 
+//                bufferSize + ", queue size: " + queue.size());
         if(toAdd > 0) {
-            final List<String> links = store.streamAll(0, toAdd)
+            final List<String> addToQueue = store.streamAll(0, toAdd)
                     .map(url -> store.delete(url))
                     .collect(Collectors.toList());
-            queue.addAll(links);
+            LOG.log(Level.FINEST, "To add to queue: {}", addToQueue);
+            queue.addAll(addToQueue);
         }
     }
 }

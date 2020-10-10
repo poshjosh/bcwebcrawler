@@ -65,8 +65,8 @@ public class CrawlerImpl<E> implements Serializable,
     
     private String currentLink;
 
-    public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrlsIfNone) {
-        this(context, new QueueImpl(context.createQueue(seedUrlsIfNone)));
+    public CrawlerImpl(CrawlerContext<E> context, Set<String> seedUrls) {
+        this(context, new QueueImpl(context.createQueue(seedUrls)));
     }
     
     public CrawlerImpl(CrawlerContext<E> context, Queue<String> linkQueue) {
@@ -79,10 +79,7 @@ public class CrawlerImpl<E> implements Serializable,
         
         this.attempted = Objects.requireNonNull(context.getAttemptedLinkBuffer());
 
-        this.collectCrawledLink = (link) -> {  
-            LOG.log(Level.INFO, "LINKS Adding link: {0}", link);
-            linkQueue.add(link);
-        };
+        this.collectCrawledLink = (link) -> linkQueue.add(link);
 
         this.linkCollector = Objects.requireNonNull(context.getLinkCollector());
 
@@ -150,7 +147,7 @@ public class CrawlerImpl<E> implements Serializable,
 
     @Override
     public boolean hasNext() {
-        
+
         boolean hasNext = false;
         
         final Predicate<String> parseUrlTest = this.context.getParseUrlTest();
@@ -173,7 +170,7 @@ public class CrawlerImpl<E> implements Serializable,
             
                 LOG.log(Level.FINE, "Rejected by ParseURLTest, URL: ", next);
 
-                linkQueue.poll();
+//                linkQueue.poll();
             }
         }
 
